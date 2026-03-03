@@ -1,0 +1,306 @@
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Box,
+  IconButton,
+  InputBase,
+  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  useTheme,
+  useMediaQuery,
+  Avatar,
+  Paper,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Badge,
+  Popover,
+  ClickAwayListener,
+} from "@mui/material";
+import {
+  Search,
+  Message,
+  DarkMode,
+  LightMode,
+  Notifications,
+  Help,
+  Menu,
+  Close,
+  FavoriteOutlined,
+  ChatBubbleOutlineOutlined,
+  PersonAddOutlined,
+} from "@mui/icons-material";
+import { useDispatch, useSelector } from "react-redux";
+import { setMode, setLogout } from "state";
+import { useNavigate } from "react-router-dom";
+import FlexBetween from "components/FlexBetween";
+import API_BASE_URL from "config";
+import { useSocket } from "context/SocketContext";
+
+// ─── SearchBar defined OUTSIDE Navbar to prevent re-mount on every keystroke ───
+const SearchBarComponent = ({ token, navigate, neutralLight, theme }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
+  const debounceRef = useRef(null);
+
+  const handleSearch = (value) => {
+    setSearchQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value.trim()) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/users/search?q=${encodeURIComponent(value)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const data = await res.json();
+        setSearchResults(data);
+        setShowResults(true);
+      } catch (e) {
+        console.error("Search failed", e);
+      }
+    }, 350);
+  };
+
+  const handleSelectUser = (userId) => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowResults(false);
+    navigate(`/profile/${userId}`);
+  };
+
+  return (
+    <ClickAwayListener onClickAway={() => setShowResults(false)}>
+      <Box sx={{ position: "relative" }}>
+        <FlexBetween backgroundColor={neutralLight} borderRadius="9px" gap="1rem" padding="0.1rem 1.5rem">
+          <InputBase
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            onFocus={() => searchResults.length && setShowResults(true)}
+            sx={{ minWidth: "180px" }}
+          />
+          <Search sx={{ color: theme.palette.neutral.medium, cursor: "pointer" }} />
+        </FlexBetween>
+
+        {showResults && searchResults.length > 0 && (
+          <Paper elevation={6} sx={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 1000, borderRadius: "12px", overflow: "hidden", maxHeight: "320px", overflowY: "auto" }}>
+            <List disablePadding>
+              {searchResults.map((u, i) => (
+                <ListItem
+                  key={u._id}
+                  button
+                  onClick={() => handleSelectUser(u._id)}
+                  divider={i < searchResults.length - 1}
+                  sx={{ "&:hover": { backgroundColor: theme.palette.neutral.light }, cursor: "pointer", gap: "0.5rem", py: "0.6rem" }}
+                >
+                  <ListItemAvatar sx={{ minWidth: 44 }}>
+                    <Avatar src={u.picturePath ? `${API_BASE_URL}/assets/${u.picturePath}` : undefined} sx={{ width: 36, height: 36, bgcolor: theme.palette.primary.main }}>
+                      {u.firstName?.[0]}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={<Typography fontWeight="600" fontSize="0.9rem">{u.firstName} {u.lastName}</Typography>}
+                    secondary={<Typography fontSize="0.75rem" color={theme.palette.neutral.medium}>{u.occupation || ""}</Typography>}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        )}
+        {showResults && searchResults.length === 0 && searchQuery.trim() && (
+          <Paper elevation={6} sx={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 1000, borderRadius: "12px", p: "1rem" }}>
+            <Typography color={theme.palette.neutral.medium} fontSize="0.85rem" textAlign="center">No users found for "{searchQuery}"</Typography>
+          </Paper>
+        )}
+      </Box>
+    </ClickAwayListener>
+  );
+};
+
+const notifIcon = (type) => {
+  if (type === "like") return <FavoriteOutlined sx={{ fontSize: 18, color: "#e0245e" }} />;
+  if (type === "comment") return <ChatBubbleOutlineOutlined sx={{ fontSize: 18, color: "#1da1f2" }} />;
+  return <PersonAddOutlined sx={{ fontSize: 18, color: "#17bf63" }} />;
+};
+
+const Navbar = () => {
+  const [isMobileMenuToggled, setIsMobileMenuToggled] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notifAnchor, setNotifAnchor] = useState(null);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.user);
+  const token = useSelector((state) => state.token);
+  const socketRef = useSocket();
+  const isNonMobileScreens = useMediaQuery("(min-width:1000px)");
+  const theme = useTheme();
+  const neutralLight = theme.palette.neutral.light;
+  const dark = theme.palette.neutral.dark;
+  const background = theme.palette.background.default;
+  const primaryLight = theme.palette.primary.light;
+  const alt = theme.palette.background.alt;
+  const fullName = `${user.firstName} ${user.lastName}`;
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Load initial notifications
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/notifications`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => Array.isArray(data) && setNotifications(data));
+  }, [token]);
+
+  // Listen for new notifications via socket
+  useEffect(() => {
+    const socket = socketRef?.current;
+    if (!socket) return;
+    const handler = (notif) => {
+      setNotifications((prev) => [notif, ...prev]);
+    };
+    socket.on("newNotification", handler);
+    return () => socket.off("newNotification", handler);
+  }, [socketRef]);
+
+  const openNotifications = (e) => {
+    setNotifAnchor(e.currentTarget);
+    // Mark all as read
+    fetch(`${API_BASE_URL}/notifications/read`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true }))));
+  };
+
+  const formatTimeAgo = (ts) => {
+    const diff = (Date.now() - new Date(ts)) / 1000;
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
+
+  const NavIcons = () => (
+    <FlexBetween gap="2rem">
+      <IconButton onClick={() => dispatch(setMode())}>
+        {theme.palette.mode === "dark" ? <DarkMode sx={{ fontSize: "25px" }} /> : <LightMode sx={{ color: dark, fontSize: "25px" }} />}
+      </IconButton>
+
+      {/* Messages */}
+      <IconButton onClick={() => navigate("/messages")} title="Messages">
+        <Message sx={{ fontSize: "25px" }} />
+      </IconButton>
+
+      {/* Notifications */}
+      <IconButton onClick={openNotifications} title="Notifications">
+        <Badge badgeContent={unreadCount} color="error" max={99}>
+          <Notifications sx={{ fontSize: "25px" }} />
+        </Badge>
+      </IconButton>
+
+      <Help sx={{ fontSize: "25px" }} />
+
+      <FormControl variant="standard" value={fullName}>
+        <Select
+          value={fullName}
+          sx={{ backgroundColor: neutralLight, width: "150px", borderRadius: "0.25rem", p: "0.25rem 1rem", "& .MuiSvgIcon-root": { pr: "0.25rem", width: "3rem" }, "& .MuiSelect-select:focus": { backgroundColor: neutralLight } }}
+          input={<InputBase />}
+        >
+          <MenuItem value={fullName}><Typography>{fullName}</Typography></MenuItem>
+          <MenuItem onClick={() => dispatch(setLogout())}>Log Out</MenuItem>
+        </Select>
+      </FormControl>
+    </FlexBetween>
+  );
+
+  return (
+    <>
+      <FlexBetween padding="1rem 6%" backgroundColor={alt}>
+        <FlexBetween gap="1.75rem">
+          <Typography fontWeight="bold" fontSize="clamp(1rem, 2rem, 2.25rem)" color="primary" onClick={() => navigate("/home")} sx={{ "&:hover": { color: primaryLight, cursor: "pointer" } }}>
+            Connects
+          </Typography>
+          {isNonMobileScreens && <SearchBarComponent token={token} navigate={navigate} neutralLight={neutralLight} theme={theme} />}
+        </FlexBetween>
+
+        {isNonMobileScreens ? <NavIcons /> : (
+          <IconButton onClick={() => setIsMobileMenuToggled(!isMobileMenuToggled)}><Menu /></IconButton>
+        )}
+
+        {/* Mobile NAV */}
+        {!isNonMobileScreens && isMobileMenuToggled && (
+          <Box position="fixed" right="0" bottom="0" height="100%" zIndex="10" maxWidth="500px" minWidth="300px" backgroundColor={background}>
+            <Box display="flex" justifyContent="flex-end" p="1rem">
+              <IconButton onClick={() => setIsMobileMenuToggled(false)}><Close /></IconButton>
+            </Box>
+            <FlexBetween display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap="3rem">
+              <IconButton onClick={() => dispatch(setMode())}>
+                {theme.palette.mode === "dark" ? <DarkMode sx={{ fontSize: "25px" }} /> : <LightMode sx={{ color: dark, fontSize: "25px" }} />}
+              </IconButton>
+              <IconButton onClick={() => navigate("/messages")}><Message sx={{ fontSize: "25px" }} /></IconButton>
+              <IconButton onClick={openNotifications}>
+                <Badge badgeContent={unreadCount} color="error"><Notifications sx={{ fontSize: "25px" }} /></Badge>
+              </IconButton>
+              <Help sx={{ fontSize: "25px" }} />
+              <FormControl variant="standard" value={fullName}>
+                <Select value={fullName} sx={{ backgroundColor: neutralLight, width: "150px", borderRadius: "0.25rem", p: "0.25rem 1rem", "& .MuiSvgIcon-root": { pr: "0.25rem", width: "3rem" }, "& .MuiSelect-select:focus": { backgroundColor: neutralLight } }} input={<InputBase />}>
+                  <MenuItem value={fullName}><Typography>{fullName}</Typography></MenuItem>
+                  <MenuItem onClick={() => dispatch(setLogout())}>Log Out</MenuItem>
+                </Select>
+              </FormControl>
+            </FlexBetween>
+          </Box>
+        )}
+      </FlexBetween>
+
+      {/* Notifications Popover */}
+      <Popover
+        open={Boolean(notifAnchor)}
+        anchorEl={notifAnchor}
+        onClose={() => setNotifAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        PaperProps={{ sx: { width: 360, maxHeight: 480, overflow: "auto", borderRadius: "12px", mt: "0.5rem" } }}
+      >
+        <Box p="1rem 1.5rem" borderBottom={`1px solid ${theme.palette.divider}`}>
+          <Typography fontWeight="700" fontSize="1.1rem">Notifications</Typography>
+        </Box>
+        {notifications.length === 0 ? (
+          <Typography color={theme.palette.neutral.medium} p="1.5rem" textAlign="center">No notifications yet</Typography>
+        ) : (
+          <List disablePadding>
+            {notifications.map((n, i) => (
+              <ListItem
+                key={n._id || i}
+                divider
+                sx={{ px: "1.5rem", py: "0.75rem", backgroundColor: n.read ? "transparent" : theme.palette.primary.light + "11", gap: "0.75rem", alignItems: "flex-start" }}
+              >
+                <ListItemAvatar sx={{ minWidth: 44, position: "relative" }}>
+                  <Avatar src={n.senderPicture ? `${API_BASE_URL}/assets/${n.senderPicture}` : undefined} sx={{ width: 40, height: 40 }}>
+                    {n.senderName?.[0]}
+                  </Avatar>
+                  <Box sx={{ position: "absolute", bottom: -2, right: -2, bgcolor: "white", borderRadius: "50%", p: "1px" }}>
+                    {notifIcon(n.type)}
+                  </Box>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={<Typography fontSize="0.85rem"><b>{n.senderName}</b> {n.message}</Typography>}
+                  secondary={<Typography fontSize="0.75rem" color={theme.palette.neutral.medium}>{formatTimeAgo(n.createdAt)}</Typography>}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Popover>
+    </>
+  );
+};
+
+export default Navbar;
