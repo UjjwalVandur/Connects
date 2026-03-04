@@ -18,6 +18,11 @@ import {
   Badge,
   Popover,
   ClickAwayListener,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
 import {
   Search,
@@ -135,6 +140,7 @@ const Navbar = () => {
   const [isMobileMenuToggled, setIsMobileMenuToggled] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notifAnchor, setNotifAnchor] = useState(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((state) => state.user);
@@ -205,7 +211,9 @@ const Navbar = () => {
         </Badge>
       </IconButton>
 
-      <Help sx={{ fontSize: "25px" }} />
+      <IconButton onClick={() => setHelpOpen(true)} title="Help & Guidelines">
+        <Help sx={{ fontSize: "25px" }} />
+      </IconButton>
 
       <FormControl variant="standard" value={fullName}>
         <Select
@@ -260,7 +268,7 @@ const Navbar = () => {
         )}
       </FlexBetween>
 
-      {/* Notifications Popover */}
+      {/* ── Notifications Popover ── */}
       <Popover
         open={Boolean(notifAnchor)}
         anchorEl={notifAnchor}
@@ -299,6 +307,38 @@ const Navbar = () => {
           </List>
         )}
       </Popover>
+
+      {/* ── Help & Guidelines Dialog ── */}
+      <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "16px" } }}>
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "1.2rem", pb: 0 }}>
+          Help & Guidelines 🤝
+        </DialogTitle>
+        <DialogContent sx={{ pt: "0.75rem !important" }}>
+          {[
+            { icon: "🏠", title: "Home Feed", text: "Your feed shows posts from other users — not your own. Like & comment to interact. Double-tap images to like instantly." },
+            { icon: "✍️", title: "Creating Posts", text: "Use the post box at the top of your home or profile page. Upload photos or videos, add a description, then Post!" },
+            { icon: "👤", title: "Your Profile", text: "Click your name or avatar to open your profile. You can view all your posts, update Social Profiles, and publish a Sponsored Ad." },
+            { icon: "🔍", title: "Search", text: "Type a name in the search bar to find users. Results appear as a dropdown — click a user to visit their profile." },
+            { icon: "💬", title: "Messaging", text: "Click the ✉️ icon in the navbar. Select a friend to chat in real-time. You can also send images, files, and record voice messages (tap the 🎙 button)." },
+            { icon: "🔔", title: "Notifications", text: "The 🔔 icon shows your latest activity — likes, comments, and friend requests. Unread notifications have a red badge. Opening the panel marks all as read." },
+            { icon: "📢", title: "Sponsored Ads", text: "Click 'Create Ad' in the Sponsored sidebar to publish your ad to all users. Provide a title, description, link, and optional media. You can delete your ad anytime." },
+            { icon: "🔗", title: "Social Profiles", text: "On your profile, click '+' next to 'Social Profiles' to add links to Twitter, LinkedIn, GitHub, Instagram, etc. Others can see and click them." },
+            { icon: "🤝", title: "Friends", text: "Click the person-add icon on any post or profile to add a friend. Friends appear in your Friends List widget. You can unfriend the same way." },
+          ].map(({ icon, title, text }) => (
+            <Box key={title} mb="0.9rem">
+              <Typography fontWeight="700" fontSize="0.95rem" mb="0.15rem">
+                {icon} {title}
+              </Typography>
+              <Typography fontSize="0.85rem" color={theme.palette.neutral.medium}>
+                {text}
+              </Typography>
+            </Box>
+          ))}
+        </DialogContent>
+        <DialogActions sx={{ px: "1.5rem", pb: "1.5rem" }}>
+          <Button onClick={() => setHelpOpen(false)} variant="contained" sx={{ borderRadius: 8 }}>Got it!</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

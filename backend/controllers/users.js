@@ -99,3 +99,67 @@ export const addRemoveFriend = async (req, res) => {
 
   res.status(200).json(formatted);
 };
+
+/* ── PATCH /users/:id/socials ─── update social profile links ── */
+export const updateSocialProfiles = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
+    const { socialProfiles } = req.body; // array of { platform, socialLink }
+    const user = await User.findByIdAndUpdate(
+      id,
+      { socialProfiles },
+      { new: true }
+    ).select("-password");
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── PATCH /users/:id/advert ─── create/update sponsored ad ─── */
+export const updateAdvert = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
+    const { title, description, link } = req.body;
+    const mediaPath = req.file ? req.file.originalname : req.body.mediaPath || "";
+    const user = await User.findByIdAndUpdate(
+      id,
+      { advert: { title, description, link, mediaPath } },
+      { new: true }
+    ).select("-password");
+    res.status(200).json(user.advert);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── GET /users/advert/random ─── pick a random active ad ───── */
+export const getRandomAd = async (req, res) => {
+  try {
+    const ads = await User.aggregate([
+      { $match: { "advert.title": { $exists: true, $ne: "" } } },
+      { $sample: { size: 1 } },
+      { $project: { firstName: 1, lastName: 1, picturePath: 1, advert: 1 } },
+    ]);
+    if (!ads.length) return res.status(200).json(null);
+    res.status(200).json(ads[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── DELETE /users/:id/advert ─── remove sponsored ad ──────── */
+export const deleteAdvert = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
+    await User.findByIdAndUpdate(id, {
+      $unset: { advert: "" },
+    });
+    res.status(200).json({ message: "Ad deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

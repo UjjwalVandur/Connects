@@ -19,6 +19,7 @@ import userRoutes          from "./routes/users.js";
 import postRoutes          from "./routes/posts.js";
 import messageRoutes       from "./routes/messages.js";
 import notificationRoutes  from "./routes/notifications.js";
+import adRoutes            from "./routes/ads.js";
 
 // ── Config ────────────────────────────────────────────────────
 dotenv.config();
@@ -94,6 +95,7 @@ app.use("/users",         userRoutes);
 app.use("/posts",         postRoutes);
 app.use("/messages",      messageRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/ads",           adRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────
 app.use((req, res) => {
