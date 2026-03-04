@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Box,
-  Button,
-  Typography,
-  useTheme,
-  TextField,
-  useMediaQuery,
-} from "@mui/material";
+import { TextField, useTheme, useMediaQuery } from "@mui/material";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { Formik } from "formik";
 import * as yup from "yup";
@@ -47,62 +40,78 @@ const initialValuesLogin = {
   password: "",
 };
 
+/* Shared styled TextField override */
+const darkFieldSx = {
+  "& .MuiInputBase-root": {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: "12px",
+    color: "#fff",
+  },
+  "& .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  "&:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(0,229,255,0.4)",
+  },
+  "& .Mui-focused .MuiOutlinedInput-notchedOutline": {
+    borderColor: "#00e5ff !important",
+    borderWidth: "1px !important",
+  },
+  "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.4)" },
+  "& .MuiInputLabel-root.Mui-focused": { color: "#00e5ff" },
+  "& .MuiFormHelperText-root": { color: "rgba(239,68,68,0.8)" },
+};
 
-
-const Form = () => {
-  const [pageType, setPageType] = useState("login");
-  const { palette } = useTheme();
-  const dispatch = useDispatch();
+const Form = ({ pageType, setPageType }) => {
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const isNonMobile = useMediaQuery("(min-width:600px)");
   const isLogin = pageType === "login";
   const isRegister = pageType === "register";
-  
+
   const register = async (values, onSubmitProps) => {
-    
+    setErrorMsg("");
     const formData = new FormData();
-    for (let value in values) {
-      formData.append(value, values[value]);
-    }
+    for (let value in values) formData.append(value, values[value]);
     formData.append("picturePath", values.picture.name);
 
-    const savedUserResponse = await fetch(
-      `${API_BASE_URL}/auth/register`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-    const savedUser = await savedUserResponse.json();
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: "POST",
+      body: formData,
+    });
+    const savedUser = await res.json();
     onSubmitProps.resetForm();
-
-    if (savedUser) {
-      setPageType("login");
-    }
+    if (savedUser) setPageType("login");
   };
 
   const login = async (values, onSubmitProps) => {
-    const loggedInResponse = await fetch(`${API_BASE_URL}/auth/login`, {
+    setErrorMsg("");
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
     });
-    const loggedIn = await loggedInResponse.json();
+    const loggedIn = await res.json();
     onSubmitProps.resetForm();
-    if (loggedIn) {
-      dispatch(
-        setLogin({
-          user: loggedIn.user,
-          token: loggedIn.token,
-        })
-      );
+    if (loggedIn.token) {
+      dispatch(setLogin({ user: loggedIn.user, token: loggedIn.token }));
       navigate("/home");
+    } else {
+      setErrorMsg(loggedIn.msg || "Invalid credentials. Please try again.");
     }
   };
 
   const handleFormSubmit = async (values, onSubmitProps) => {
-    if (isLogin) await login(values, onSubmitProps);
-    if (isRegister) await register(values, onSubmitProps);
+    setLoading(true);
+    try {
+      if (isLogin) await login(values, onSubmitProps);
+      if (isRegister) await register(values, onSubmitProps);
+    } catch (e) {
+      setErrorMsg("Something went wrong. Please try again.");
+    }
+    setLoading(false);
   };
 
   return (
@@ -110,6 +119,7 @@ const Form = () => {
       onSubmit={handleFormSubmit}
       initialValues={isLogin ? initialValuesLogin : initialValuesRegister}
       validationSchema={isLogin ? loginSchema : registerSchema}
+      enableReinitialize
     >
       {({
         values,
@@ -122,12 +132,11 @@ const Form = () => {
         resetForm,
       }) => (
         <form onSubmit={handleSubmit}>
-          <Box
-            display="grid"
-            gap="30px"
-            gridTemplateColumns="repeat(4,minmax(0,1fr))"
-            sx={{
-              "& > div": { gridColumn: isNonMobile ? undefined : "span 4" },
+          <div
+            style={{
+              display: "grid",
+              gap: "16px",
+              gridTemplateColumns: "repeat(4, minmax(0,1fr))",
             }}
           >
             {isRegister && (
@@ -140,7 +149,8 @@ const Form = () => {
                   name="firstName"
                   error={Boolean(touched.firstName) && Boolean(errors.firstName)}
                   helperText={touched.firstName && errors.firstName}
-                  sx={{ gridColumn: "span 2" }}
+                  sx={{ ...darkFieldSx, gridColumn: "span 2" }}
+                  size="small"
                 />
                 <TextField
                   label="Last Name"
@@ -150,7 +160,8 @@ const Form = () => {
                   name="lastName"
                   error={Boolean(touched.lastName) && Boolean(errors.lastName)}
                   helperText={touched.lastName && errors.lastName}
-                  sx={{ gridColumn: "span 2" }}
+                  sx={{ ...darkFieldSx, gridColumn: "span 2" }}
+                  size="small"
                 />
                 <TextField
                   label="Location"
@@ -160,7 +171,8 @@ const Form = () => {
                   name="location"
                   error={Boolean(touched.location) && Boolean(errors.location)}
                   helperText={touched.location && errors.location}
-                  sx={{ gridColumn: "span 4" }}
+                  sx={{ ...darkFieldSx, gridColumn: "span 4" }}
+                  size="small"
                 />
                 <TextField
                   label="Occupation"
@@ -168,47 +180,44 @@ const Form = () => {
                   onChange={handleChange}
                   value={values.occupation}
                   name="occupation"
-                  error={
-                    Boolean(touched.occupation) && Boolean(errors.occupation)
-                  }
+                  error={Boolean(touched.occupation) && Boolean(errors.occupation)}
                   helperText={touched.occupation && errors.occupation}
-                  sx={{ gridColumn: "span 4" }}
+                  sx={{ ...darkFieldSx, gridColumn: "span 4" }}
+                  size="small"
                 />
-                <Box
-                  gridColumn="span 4"
-                  border={`1px solid ${palette.neutral.medium}`}
-                  borderRadius="5px"
-                  p="1rem"
-                >
+
+                {/* Dropzone */}
+                <div style={{ gridColumn: "span 4" }}>
                   <Dropzone
                     acceptedFiles=".jpg,.jpeg,.png"
                     multiple={false}
-                    onDrop={(acceptedFiles) =>
-                      setFieldValue("picture", acceptedFiles[0])
-                    }
+                    onDrop={(acceptedFiles) => setFieldValue("picture", acceptedFiles[0])}
                   >
                     {({ getRootProps, getInputProps }) => (
-                      <Box
+                      <div
                         {...getRootProps()}
-                        border={`2px dashed ${palette.primary.main}`}
-                        p="1rem"
-                        sx={{ "&:hover": { cursor: "pointer" } }}
+                        className="border border-dashed border-white/20 rounded-xl p-4 cursor-pointer hover:border-cyan-400/50 transition-colors"
+                        style={{ background: "rgba(255,255,255,0.03)" }}
                       >
                         <input {...getInputProps()} />
                         {!values.picture ? (
-                          <p>Add Picture Here</p>
+                          <div className="flex flex-col items-center justify-center gap-1 text-white/40 text-sm py-1">
+                            <span className="text-2xl">📷</span>
+                            <span>Drop a profile photo here, or click to browse</span>
+                          </div>
                         ) : (
                           <FlexBetween>
-                            <Typography>{values.picture.name}</Typography>
-                            <EditOutlinedIcon />
+                            <span className="text-white/70 text-sm">{values.picture.name}</span>
+                            <EditOutlinedIcon sx={{ color: "rgba(255,255,255,0.4)", fontSize: 18 }} />
                           </FlexBetween>
                         )}
-                      </Box>
+                      </div>
                     )}
                   </Dropzone>
-                </Box>
+                </div>
               </>
             )}
+
             <TextField
               label="Email"
               onBlur={handleBlur}
@@ -217,7 +226,8 @@ const Form = () => {
               name="email"
               error={Boolean(touched.email) && Boolean(errors.email)}
               helperText={touched.email && errors.email}
-              sx={{ gridColumn: "span 4" }}
+              sx={{ ...darkFieldSx, gridColumn: "span 4" }}
+              size="small"
             />
             <TextField
               label="Password"
@@ -228,47 +238,41 @@ const Form = () => {
               name="password"
               error={Boolean(touched.password) && Boolean(errors.password)}
               helperText={touched.password && errors.password}
-              sx={{ gridColumn: "span 4" }}
+              sx={{ ...darkFieldSx, gridColumn: "span 4" }}
+              size="small"
             />
-          </Box>
+          </div>
 
-          {/* Buttons */}
-          <Box>
-            <Button
-              fullWidth
-              type="submit"
-              sx={{
-                m: "2rem 0",
-                p: "1rem",
-                backgroundColor: palette.primary.main,
-                color: palette.background.alt,
-                "&:hover": { color: palette.primary.dark },
-              }}
-            >
-              {isLogin ? "Login" : "Register"}
-            </Button>
-            <Typography
-              onClick={() => {
-                setPageType(isLogin ? "register" : "login");
-                resetForm();
-              }}
-              sx={{
-                textDecoration: "underline",
-                color: palette.primary.main,
-                "&:hover": {
-                  cursor: "pointer",
-                  color: palette.primary.dark,
-                },
-              }}
-            >
-              {isLogin
-                ? "Don't have an account? Sign Up here."
-                : "Already have an account? Login here."}
-            </Typography>
-          </Box>
+          {/* Error message */}
+          {errorMsg && (
+            <div className="mt-3 px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
+              {errorMsg}
+            </div>
+          )}
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-5 w-full py-3 rounded-full font-bold text-sm transition-all duration-200 disabled:opacity-60"
+            style={{
+              background: loading
+                ? "rgba(255,255,255,0.1)"
+                : "linear-gradient(135deg, #00e5ff, #0077ff)",
+              color: loading ? "rgba(255,255,255,0.5)" : "#000",
+              boxShadow: loading ? "none" : "0 0 24px rgba(0,229,255,0.3)",
+            }}
+          >
+            {loading
+              ? "Please wait…"
+              : isLogin
+              ? "Sign In →"
+              : "Create Account →"}
+          </button>
         </form>
       )}
     </Formik>
   );
 };
+
 export default Form;

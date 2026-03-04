@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import HomePage from "./scenes/homePage";
 import LoginPage from "./scenes/loginPage";
+import LandingPage from "./scenes/landingPage";
 import ProfilePage from "./scenes/profilePage";
 import MessagesPage from "./scenes/messagesPage";
 import { useSelector } from "react-redux";
@@ -22,10 +23,11 @@ function App() {
           <CssBaseline />
           <SocketProvider>
             <Routes>
-              <Route path="/"            element={<LoginPage />} />
-              <Route path="/home"        element={isAuth ? <HomePage />    : <Navigate to="/" />} />
-              <Route path="/profile/:userId" element={isAuth ? <ProfilePage /> : <Navigate to="/" />} />
-              <Route path="/messages"    element={isAuth ? <MessagesPage /> : <Navigate to="/" />} />
+              <Route path="/"               element={<LandingPage />} />
+              <Route path="/login"          element={<LoginPage />} />
+              <Route path="/home"           element={isAuth ? <HomePage />    : <Navigate to="/login" />} />
+              <Route path="/profile/:userId" element={isAuth ? <ProfilePage /> : <Navigate to="/login" />} />
+              <Route path="/messages"       element={isAuth ? <MessagesPage /> : <Navigate to="/login" />} />
             </Routes>
           </SocketProvider>
         </ThemeProvider>
