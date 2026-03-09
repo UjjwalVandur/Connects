@@ -38,10 +38,10 @@ export const createAd = async (req, res) => {
 export const getRandomAd = async (req, res) => {
   try {
     const count = await Ad.countDocuments();
-    if (count === 0) return res.status(200).json(null);
-    const random = Math.floor(Math.random() * count);
-    const ad = await Ad.findOne().skip(random);
-    res.status(200).json(ad);
+    if (count === 0) return res.status(200).json([]);
+    // Fetch up to 5 random ads to populate the carousel
+    const ads = await Ad.aggregate([{ $sample: { size: 5 } }]);
+    res.status(200).json(ads);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

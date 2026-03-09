@@ -8,7 +8,7 @@ import FriendListWidget from "scenes/widgets/FriendListWidget";
 import MyPostWidget from "scenes/widgets/MyPostWidget";
 import PostsWidget from "scenes/widgets/PostsWidget";
 import UserWidget from "scenes/widgets/UserWidget";
-
+import { DottedSurface } from "../../components/ui/dotted-surface";
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
   const { userId } = useParams();
@@ -36,6 +36,7 @@ const ProfilePage = () => {
 
   return (
     <Box>
+      <DottedSurface className="-z-10" />
       <Navbar />
       <Box
         width="100%"

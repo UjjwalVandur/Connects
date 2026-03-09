@@ -39,10 +39,13 @@ import {
 } from "@mui/icons-material";
 import { useDispatch, useSelector } from "react-redux";
 import { setMode, setLogout } from "state";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import FlexBetween from "components/FlexBetween";
 import API_BASE_URL from "config";
 import { useSocket } from "context/SocketContext";
+
+import { ExpandableTabs } from "components/ui/expandable-tabs";
+import { Home, MessageSquare, Bell, Moon, Sun, HelpCircle, User } from "lucide-react";
 
 // ─── SearchBar defined OUTSIDE Navbar to prevent re-mount on every keystroke ───
 const SearchBarComponent = ({ token, navigate, neutralLight, theme }) => {
@@ -140,9 +143,11 @@ const Navbar = () => {
   const [isMobileMenuToggled, setIsMobileMenuToggled] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notifAnchor, setNotifAnchor] = useState(null);
+  const [userAnchor, setUserAnchor] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useSelector((state) => state.user);
   const token = useSelector((state) => state.token);
   const socketRef = useSocket();
@@ -193,52 +198,70 @@ const Navbar = () => {
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
-  const NavIcons = () => (
-    <FlexBetween gap="2rem">
-      <IconButton onClick={() => dispatch(setMode())}>
-        {theme.palette.mode === "dark" ? <DarkMode sx={{ fontSize: "25px" }} /> : <LightMode sx={{ color: dark, fontSize: "25px" }} />}
-      </IconButton>
+  const isDarkMode = theme.palette.mode === "dark";
 
-      {/* Messages */}
-      <IconButton onClick={() => navigate("/messages")} title="Messages">
-        <Message sx={{ fontSize: "25px" }} />
-      </IconButton>
+  let activeTab = null;
+  if (location.pathname.includes("/home")) activeTab = 0;
+  else if (location.pathname.includes("/messages")) activeTab = 1;
 
-      {/* Notifications */}
-      <IconButton onClick={openNotifications} title="Notifications">
-        <Badge badgeContent={unreadCount} color="error" max={99}>
-          <Notifications sx={{ fontSize: "25px" }} />
+  const tabs = [
+    {
+      title: "Home",
+      icon: Home,
+      onClick: () => navigate("/home"),
+    },
+    {
+      title: "Messages",
+      icon: MessageSquare,
+      onClick: () => navigate("/messages"),
+    },
+    {
+      title: "Notifications",
+      icon: () => (
+        <Badge badgeContent={unreadCount} color="error" max={99} sx={{ '& .MuiBadge-badge': { right: -3, top: 3 } }}>
+          <Bell size={20} />
         </Badge>
-      </IconButton>
-
-      <IconButton onClick={() => setHelpOpen(true)} title="Help & Guidelines">
-        <Help sx={{ fontSize: "25px" }} />
-      </IconButton>
-
-      <FormControl variant="standard" value={fullName}>
-        <Select
-          value={fullName}
-          sx={{ backgroundColor: neutralLight, width: "150px", borderRadius: "0.25rem", p: "0.25rem 1rem", "& .MuiSvgIcon-root": { pr: "0.25rem", width: "3rem" }, "& .MuiSelect-select:focus": { backgroundColor: neutralLight } }}
-          input={<InputBase />}
-        >
-          <MenuItem value={fullName}><Typography>{fullName}</Typography></MenuItem>
-          <MenuItem onClick={() => dispatch(setLogout())}>Log Out</MenuItem>
-        </Select>
-      </FormControl>
-    </FlexBetween>
-  );
+      ),
+      onClick: (e) => openNotifications(e),
+    },
+    { type: "separator" },
+    {
+      title: isDarkMode ? "Light Mode" : "Dark Mode",
+      icon: isDarkMode ? Sun : Moon,
+      onClick: () => dispatch(setMode()),
+    },
+    {
+      title: "Help",
+      icon: HelpCircle,
+      onClick: () => setHelpOpen(true),
+    },
+    { type: "separator" },
+    {
+      title: fullName,
+      icon: User,
+      onClick: (e) => setUserAnchor(e.currentTarget),
+    },
+  ];
 
   return (
     <>
-      <FlexBetween padding="1rem 6%" backgroundColor={alt}>
+      <FlexBetween padding="1rem 6%" backgroundColor={alt} position="sticky" top="0" zIndex="1000">
         <FlexBetween gap="1.75rem">
-          <Typography fontWeight="bold" fontSize="clamp(1rem, 2rem, 2.25rem)" color="primary" onClick={() => navigate("/home")} sx={{ "&:hover": { color: primaryLight, cursor: "pointer" } }}>
+          <Typography fontWeight="bold" fontSize="clamp(1rem, 2rem, 2.25rem)" color="primary" onClick={() => navigate("/home")} sx={{ "&:hover": { color: theme.palette.mode === "dark" ? primaryLight : theme.palette.primary.dark, cursor: "pointer" } }}>
             Connects
           </Typography>
           {isNonMobileScreens && <SearchBarComponent token={token} navigate={navigate} neutralLight={neutralLight} theme={theme} />}
         </FlexBetween>
 
-        {isNonMobileScreens ? <NavIcons /> : (
+        {isNonMobileScreens ? (
+          <ExpandableTabs 
+            tabs={tabs} 
+            activeTab={activeTab}
+            isDarkMode={isDarkMode}
+            activeColor={isDarkMode ? "text-cyan-400" : "text-cyan-600"} 
+            className={isDarkMode ? "border-neutral-800 bg-neutral-900/80 shadow-lg" : "border-neutral-200 bg-white/80 shadow-md"}
+          />
+        ) : (
           <IconButton onClick={() => setIsMobileMenuToggled(!isMobileMenuToggled)}><Menu /></IconButton>
         )}
 
@@ -248,33 +271,41 @@ const Navbar = () => {
             <Box display="flex" justifyContent="flex-end" p="1rem">
               <IconButton onClick={() => setIsMobileMenuToggled(false)}><Close /></IconButton>
             </Box>
-            <FlexBetween display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap="3rem">
-              <IconButton onClick={() => dispatch(setMode())}>
-                {theme.palette.mode === "dark" ? <DarkMode sx={{ fontSize: "25px" }} /> : <LightMode sx={{ color: dark, fontSize: "25px" }} />}
-              </IconButton>
-              <IconButton onClick={() => navigate("/messages")}><Message sx={{ fontSize: "25px" }} /></IconButton>
-              <IconButton onClick={openNotifications}>
-                <Badge badgeContent={unreadCount} color="error"><Notifications sx={{ fontSize: "25px" }} /></Badge>
-              </IconButton>
-              <Help sx={{ fontSize: "25px" }} />
-              <FormControl variant="standard" value={fullName}>
-                <Select value={fullName} sx={{ backgroundColor: neutralLight, width: "150px", borderRadius: "0.25rem", p: "0.25rem 1rem", "& .MuiSvgIcon-root": { pr: "0.25rem", width: "3rem" }, "& .MuiSelect-select:focus": { backgroundColor: neutralLight } }} input={<InputBase />}>
-                  <MenuItem value={fullName}><Typography>{fullName}</Typography></MenuItem>
-                  <MenuItem onClick={() => dispatch(setLogout())}>Log Out</MenuItem>
-                </Select>
-              </FormControl>
-            </FlexBetween>
+              <ExpandableTabs 
+                tabs={tabs} 
+                activeTab={activeTab}
+                isDarkMode={isDarkMode}
+                activeColor={isDarkMode ? "text-cyan-400" : "text-cyan-600"} 
+                className={isDarkMode ? "border-neutral-800 bg-neutral-900/80 shadow-lg" : "border-neutral-200 bg-white/80 shadow-md"}
+              />
           </Box>
         )}
       </FlexBetween>
+
+      {/* ── User Dropdown Popover ── */}
+      <Popover
+        open={Boolean(userAnchor)}
+        anchorEl={userAnchor}
+        onClose={() => setUserAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
+        PaperProps={{ sx: { width: 180, borderRadius: "12px", mt: "0.5rem", p: "0.5rem" } }}
+      >
+        <MenuItem onClick={() => { setUserAnchor(null); navigate(`/profile/${user._id}`); }} sx={{ borderRadius: "8px", mb: "4px" }}>
+          Profile
+        </MenuItem>
+        <MenuItem onClick={() => dispatch(setLogout())} sx={{ borderRadius: "8px", color: "#ff4d4d" }}>
+          Log Out
+        </MenuItem>
+      </Popover>
 
       {/* ── Notifications Popover ── */}
       <Popover
         open={Boolean(notifAnchor)}
         anchorEl={notifAnchor}
         onClose={() => setNotifAnchor(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
         PaperProps={{ sx: { width: 360, maxHeight: 480, overflow: "auto", borderRadius: "12px", mt: "0.5rem" } }}
       >
         <Box p="1rem 1.5rem" borderBottom={`1px solid ${theme.palette.divider}`}>

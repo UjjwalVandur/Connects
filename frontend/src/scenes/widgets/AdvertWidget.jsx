@@ -13,6 +13,36 @@ import { useSelector } from "react-redux";
 import FlexBetween from "components/FlexBetween";
 import WidgetWrapper from "components/WidgetWrapper";
 import API_BASE_URL from "config";
+import { HelpOutlineOutlined } from "@mui/icons-material";
+
+/* ── Help / Guidelines Dialog ────────────────────────────── */
+const HelpDialog = ({ open, onClose }) => {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "16px" } }}>
+      <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
+        Ad Creation Guidelines
+      </DialogTitle>
+      <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <Typography variant="body2" color="text.secondary">
+          Welcome to Sponsored Ads! Please review the following guidelines to ensure your ad is approved and performs well:
+        </Typography>
+        <Box component="ul" sx={{ pl: 2, m: 0, opacity: 0.8, fontSize: "0.9rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <li><strong>Keep it relevant:</strong> Ensure your ad targets the right audience and aligns with Connects community standards.</li>
+          <li><strong>High-Quality Media:</strong> Use high-resolution images or videos. Avoid blurry or pixelated media.</li>
+          <li><strong>Clear Call-to-Action:</strong> Provide a valid URL so users can easily visit your product or service.</li>
+          <li><strong>No Offensive Content:</strong> Ads containing hate speech, sensitive content, or misleading information will be swiftly removed.</li>
+          <li><strong>Accurate Descriptions:</strong> Be honest about what you are promoting. Misleading descriptions are strictly prohibited.</li>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ p: "1rem" }}>
+        <Button onClick={onClose} variant="contained" sx={{ borderRadius: 8 }}>
+          Understood
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 
 /* ── Create Ad Dialog ─────────────────────────────────────── */
 const CreateAdDialog = ({ open, onClose, token, userId, onSaved }) => {
@@ -23,6 +53,7 @@ const CreateAdDialog = ({ open, onClose, token, userId, onSaved }) => {
   const [mediaFile,   setFile]    = useState(null);
   const [preview,     setPreview] = useState(null);
   const [saving,      setSaving]  = useState(false);
+  const [helpOpen,    setHelpOpen] = useState(false);
 
   const reset = () => { setTitle(""); setDesc(""); setLink(""); setFile(null); setPreview(null); };
 
@@ -61,10 +92,17 @@ const CreateAdDialog = ({ open, onClose, token, userId, onSaved }) => {
   return (
     <Dialog open={open} onClose={() => { reset(); onClose(); }} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "16px" } }}>
       <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
-        <Box display="flex" alignItems="center" gap="0.5rem">
-          <CampaignOutlined color="primary" />
-          Create Sponsored Ad
-        </Box>
+        <FlexBetween>
+          <Box display="flex" alignItems="center" gap="0.5rem">
+            <CampaignOutlined color="primary" />
+            Create Sponsored Ad
+          </Box>
+          <Tooltip title="View Ad Guidelines">
+            <IconButton size="small" onClick={() => setHelpOpen(true)}>
+              <HelpOutlineOutlined fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </FlexBetween>
       </DialogTitle>
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: "0.9rem", pt: "0.5rem !important" }}>
         <TextField label="Ad Title *" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth size="small" />
@@ -100,6 +138,8 @@ const CreateAdDialog = ({ open, onClose, token, userId, onSaved }) => {
           {saving ? <CircularProgress size={18} /> : "Publish Ad"}
         </Button>
       </DialogActions>
+
+      <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </Dialog>
   );
 };
@@ -129,12 +169,18 @@ const AdvertWidget = () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     const mine   = await res.json();
-    const random = await res2.json();
+    const randomAds = await res2.json();
 
-    // Combine: all mine + the random ad (dedup by id)
+    // Combine: all mine + the random ads (dedup by id)
     const combined = Array.isArray(mine) ? [...mine] : [];
-    if (random && !combined.find((a) => a._id === random._id)) {
-      combined.push(random);
+    if (Array.isArray(randomAds)) {
+      randomAds.forEach((rAd) => {
+        if (!combined.find((a) => a._id === rAd._id)) {
+          combined.push(rAd);
+        }
+      });
+    } else if (randomAds && !combined.find((a) => a._id === randomAds._id)) {
+      combined.push(randomAds);
     }
     setAds(combined);
     setLoaded(true);
