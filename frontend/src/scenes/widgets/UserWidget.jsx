@@ -45,7 +45,32 @@ const platformIcon = (platform, props = {}) => {
 /* ── Edit Social Links Dialog ─────────────────────────────── */
 const SocialDialog = ({ open, onClose, initialProfiles, token, userId, onSaved }) => {
   const { palette } = useTheme();
+  const mode = useSelector((s) => s.mode);
+  const isDark = mode === "dark";
   const [profiles, setProfiles] = useState(initialProfiles || []);
+
+  /* Glass card colour tokens */
+  const paperBg  = isDark ? "rgba(13,17,23,0.97)"       : "rgba(255,255,255,0.97)";
+  const paperBdr = isDark ? "rgba(255,255,255,0.09)"    : "rgba(100,116,139,0.2)";
+  const textPri  = isDark ? "#ffffff"                    : "#0f172a";
+  const textSec  = isDark ? "rgba(255,255,255,0.6)"     : "#64748b";
+  const inputBg  = isDark ? "rgba(255,255,255,0.06)"    : "rgba(0,0,0,0.03)";
+  const inputClr = isDark ? "#ffffff"                    : "#0f172a";
+  const labelClr = isDark ? "rgba(255,255,255,0.55)"    : "#64748b";
+  const shadow   = isDark ? "0 24px 48px rgba(0,0,0,0.55)" : "0 16px 36px rgba(0,0,0,0.12)";
+
+  const fieldSx = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: inputBg,
+      color: inputClr,
+      "& fieldset": { borderColor: paperBdr },
+      "&:hover fieldset": { borderColor: isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.3)" },
+      "&.Mui-focused fieldset": { borderColor: palette.primary.main },
+    },
+    "& .MuiInputLabel-root": { color: labelClr },
+    "& .MuiInputLabel-root.Mui-focused": { color: palette.primary.main },
+    "& .MuiSelect-icon": { color: labelClr },
+  };
 
   useEffect(() => {
     if (open) setProfiles(initialProfiles || []);
@@ -71,25 +96,55 @@ const SocialDialog = ({ open, onClose, initialProfiles, token, userId, onSaved }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "16px" } }}>
-      <DialogTitle sx={{ fontWeight: 700 }}>Manage Social Profiles</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: "20px",
+          background: paperBg,
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: `1.5px solid ${paperBdr}`,
+          boxShadow: shadow,
+          color: textPri,
+        },
+      }}
+      BackdropProps={{ sx: { backdropFilter: "blur(12px)", background: "rgba(0,0,0,0.5)" } }}
+    >
+      <DialogTitle sx={{ fontWeight: 700, color: textPri }}>Manage Social Profiles</DialogTitle>
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: "0.75rem", pt: "0.5rem !important" }}>
         {profiles.length === 0 && (
-          <Typography color={palette.neutral.medium} fontSize="0.85rem">
+          <Typography sx={{ fontSize: "0.85rem", color: textSec }}>
             No social profiles yet. Click "+ Add" to add one.
           </Typography>
         )}
         {profiles.map((row, idx) => (
           <Box key={idx} display="flex" gap="0.5rem" alignItems="center">
-            <FormControl size="small" sx={{ minWidth: 130 }}>
+            <FormControl size="small" sx={{ minWidth: 130, ...fieldSx }}>
               <InputLabel>Platform</InputLabel>
               <Select
                 value={row.platform}
                 label="Platform"
                 onChange={(e) => updateRow(idx, "platform", e.target.value)}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      background: isDark ? "rgba(13,17,23,0.97)" : "#fff",
+                      backdropFilter: "blur(16px)",
+                      border: `1px solid ${paperBdr}`,
+                      color: inputClr,
+                      "& .MuiMenuItem-root:hover": {
+                        background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+                      },
+                    },
+                  },
+                }}
               >
                 {PLATFORM_OPTIONS.map((p) => (
-                  <MenuItem key={p.key} value={p.key}>
+                  <MenuItem key={p.key} value={p.key} sx={{ color: inputClr }}>
                     <Box display="flex" alignItems="center" gap="0.4rem">
                       {platformIcon(p.key, { fontSize: "small" })}
                       {p.label}
@@ -106,6 +161,7 @@ const SocialDialog = ({ open, onClose, initialProfiles, token, userId, onSaved }
               onChange={(e) => updateRow(idx, "socialLink", e.target.value)}
               placeholder="https://"
               fullWidth
+              sx={fieldSx}
             />
 
             <IconButton onClick={() => removeRow(idx)} size="small" color="error">
@@ -117,16 +173,23 @@ const SocialDialog = ({ open, onClose, initialProfiles, token, userId, onSaved }
           startIcon={<AddOutlined />}
           size="small"
           onClick={addRow}
-          sx={{ alignSelf: "flex-start", mt: "0.25rem" }}
+          sx={{ alignSelf: "flex-start", mt: "0.25rem", color: palette.primary.main }}
         >
           Add Profile
         </Button>
       </DialogContent>
       <DialogActions sx={{ px: "1.5rem", pb: "1.5rem" }}>
-        <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 8 }}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained" startIcon={<SaveOutlined />} sx={{ borderRadius: 8 }}>
-          Save
-        </Button>
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          sx={{ borderRadius: 8, borderColor: paperBdr, color: textSec, "&:hover": { borderColor: textSec } }}
+        >Cancel</Button>
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          startIcon={<SaveOutlined />}
+          sx={{ borderRadius: 8, px: "1.5rem" }}
+        >Save</Button>
       </DialogActions>
     </Dialog>
   );

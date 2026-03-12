@@ -1,12 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Box,
   IconButton,
   InputBase,
   Typography,
-  Select,
   MenuItem,
-  FormControl,
   useTheme,
   useMediaQuery,
   Avatar,
@@ -23,36 +21,42 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  CircularProgress,
 } from "@mui/material";
 import {
   Search,
-  Message,
-  DarkMode,
-  LightMode,
-  Notifications,
-  Help,
   Menu,
   Close,
   FavoriteOutlined,
   ChatBubbleOutlineOutlined,
   PersonAddOutlined,
+  PhotoCamera,
 } from "@mui/icons-material";
 import { useDispatch, useSelector } from "react-redux";
-import { setMode, setLogout } from "state";
+import { setMode, setLogout, setLogin } from "state";
 import { useNavigate, useLocation } from "react-router-dom";
 import FlexBetween from "components/FlexBetween";
 import API_BASE_URL from "config";
 import { useSocket } from "context/SocketContext";
+import { MessageCircle, Heart, User as UserIcon } from "lucide-react";
 
 import { ExpandableTabs } from "components/ui/expandable-tabs";
+import { ActivityDropdown } from "components/ui/activity-dropdown";
 import { Home, MessageSquare, Bell, Moon, Sun, HelpCircle, User } from "lucide-react";
 
 // ─── SearchBar defined OUTSIDE Navbar to prevent re-mount on every keystroke ───
-const SearchBarComponent = ({ token, navigate, neutralLight, theme }) => {
+const SearchBarComponent = ({ token, navigate, isDarkMode, theme }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const debounceRef = useRef(null);
+
+  // Theme-aware colour tokens for the search field
+  const inputBg     = isDarkMode ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)";
+  const inputBorder = isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(100,116,139,0.25)";
+  const inputColor  = isDarkMode ? "#ffffff"                 : "#0f172a";
+  const placeholderColor = isDarkMode ? "rgba(255,255,255,0.4)" : "#94a3b8";
+  const accentColor = isDarkMode ? "#00D5FA"                 : "#00A0BC";
 
   const handleSearch = (value) => {
     setSearchQuery(value);
@@ -87,16 +91,36 @@ const SearchBarComponent = ({ token, navigate, neutralLight, theme }) => {
   return (
     <ClickAwayListener onClickAway={() => setShowResults(false)}>
       <Box sx={{ position: "relative" }}>
-        <FlexBetween backgroundColor={neutralLight} borderRadius="9px" gap="1rem" padding="0.1rem 1.5rem">
+        {/* Themed search field */}
+        <Box
+          sx={{
+            display: "flex", alignItems: "center", gap: "0.5rem",
+            background: inputBg,
+            backdropFilter: "blur(12px)",
+            border: `1px solid ${inputBorder}`,
+            borderRadius: "12px",
+            px: "1rem", py: "0.4rem",
+            transition: "border-color 0.2s, box-shadow 0.2s",
+            "&:focus-within": {
+              borderColor: accentColor,
+              boxShadow: `0 0 0 3px ${accentColor}22`,
+            },
+          }}
+        >
+          <Search sx={{ color: placeholderColor, width: 18, height: 18 }} />
           <InputBase
             placeholder="Search users..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             onFocus={() => searchResults.length && setShowResults(true)}
-            sx={{ minWidth: "180px" }}
+            sx={{
+              minWidth: "160px",
+              color: inputColor,
+              fontSize: "0.88rem",
+              "& .MuiInputBase-input::placeholder": { color: placeholderColor, opacity: 1 },
+            }}
           />
-          <Search sx={{ color: theme.palette.neutral.medium, cursor: "pointer" }} />
-        </FlexBetween>
+        </Box>
 
         {showResults && searchResults.length > 0 && (
           <Paper elevation={6} sx={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 1000, borderRadius: "12px", overflow: "hidden", maxHeight: "320px", overflowY: "auto" }}>
@@ -133,11 +157,17 @@ const SearchBarComponent = ({ token, navigate, neutralLight, theme }) => {
   );
 };
 
-const notifIcon = (type) => {
-  if (type === "like") return <FavoriteOutlined sx={{ fontSize: 18, color: "#e0245e" }} />;
-  if (type === "comment") return <ChatBubbleOutlineOutlined sx={{ fontSize: 18, color: "#1da1f2" }} />;
-  return <PersonAddOutlined sx={{ fontSize: 18, color: "#17bf63" }} />;
-};
+const notifToActivity = (n, formatTimeAgo) => ({
+  id: n._id,
+  icon: n.type === "like"
+    ? <Heart style={{ width: 14, height: 14 }} />
+    : n.type === "comment"
+      ? <MessageCircle style={{ width: 14, height: 14 }} />
+      : <UserIcon style={{ width: 14, height: 14 }} />,
+  title: n.senderName || "Someone",
+  description: n.message || "",
+  time: formatTimeAgo(n.createdAt),
+});
 
 const Navbar = () => {
   const [isMobileMenuToggled, setIsMobileMenuToggled] = useState(false);
@@ -145,11 +175,17 @@ const Navbar = () => {
   const [notifAnchor, setNotifAnchor] = useState(null);
   const [userAnchor, setUserAnchor] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [picOpen, setPicOpen] = useState(false);
+  const [picFile, setPicFile] = useState(null);
+  const [picPreview, setPicPreview] = useState(null);
+  const [picSaving, setPicSaving] = useState(false);
+  const picInputRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.user);
   const token = useSelector((state) => state.token);
+  const mode = useSelector((state) => state.mode);
   const socketRef = useSocket();
   const isNonMobileScreens = useMediaQuery("(min-width:1000px)");
   const theme = useTheme();
@@ -188,6 +224,29 @@ const Navbar = () => {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
     }).then(() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true }))));
+  };
+
+  const handlePicUpload = async () => {
+    if (!picFile) return;
+    setPicSaving(true);
+    const fd = new FormData();
+    fd.append("picture", picFile);
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/${user._id}/picture`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      const data = await res.json();
+      dispatch(setLogin({ user: { ...user, picturePath: data.picturePath }, token }));
+      setPicOpen(false);
+      setPicFile(null);
+      setPicPreview(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setPicSaving(false);
+    }
   };
 
   const formatTimeAgo = (ts) => {
@@ -245,7 +304,25 @@ const Navbar = () => {
 
   return (
     <>
-      <FlexBetween padding="1rem 6%" backgroundColor={alt} position="sticky" top="0" zIndex="1000">
+      <FlexBetween
+        padding="1rem 6%"
+        position="sticky"
+        top="0"
+        zIndex="1000"
+        style={{
+          background: isDarkMode
+            ? "rgba(10,10,15,0.6)"
+            : "rgba(248,250,255,0.6)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: isDarkMode
+            ? "1px solid rgba(255,255,255,0.06)"
+            : "1px solid rgba(100,116,139,0.12)",
+          boxShadow: isDarkMode
+            ? "0 4px 24px rgba(0,0,0,0.4)"
+            : "0 4px 24px rgba(0,0,0,0.06)",
+        }}
+      >
         <FlexBetween gap="1.75rem">
           <Typography fontWeight="bold" fontSize="clamp(1rem, 2rem, 2.25rem)" color="primary" onClick={() => navigate("/home")} sx={{ "&:hover": { color: theme.palette.mode === "dark" ? primaryLight : theme.palette.primary.dark, cursor: "pointer" } }}>
             Connects
@@ -294,6 +371,9 @@ const Navbar = () => {
         <MenuItem onClick={() => { setUserAnchor(null); navigate(`/profile/${user._id}`); }} sx={{ borderRadius: "8px", mb: "4px" }}>
           Profile
         </MenuItem>
+        <MenuItem onClick={() => { setUserAnchor(null); setPicOpen(true); }} sx={{ borderRadius: "8px", mb: "4px" }}>
+          Change Photo
+        </MenuItem>
         <MenuItem onClick={() => dispatch(setLogout())} sx={{ borderRadius: "8px", color: "#ff4d4d" }}>
           Log Out
         </MenuItem>
@@ -306,45 +386,42 @@ const Navbar = () => {
         onClose={() => setNotifAnchor(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         transformOrigin={{ vertical: "top", horizontal: "center" }}
-        PaperProps={{ sx: { width: 360, maxHeight: 480, overflow: "auto", borderRadius: "12px", mt: "0.5rem" } }}
+        PaperProps={{
+          sx: {
+            width: 360, borderRadius: "20px", mt: "0.5rem",
+            background: "transparent", boxShadow: "none"
+          }
+        }}
       >
-        <Box p="1rem 1.5rem" borderBottom={`1px solid ${theme.palette.divider}`}>
-          <Typography fontWeight="700" fontSize="1.1rem">Notifications</Typography>
-        </Box>
-        {notifications.length === 0 ? (
-          <Typography color={theme.palette.neutral.medium} p="1.5rem" textAlign="center">No notifications yet</Typography>
-        ) : (
-          <List disablePadding>
-            {notifications.map((n, i) => (
-              <ListItem
-                key={n._id || i}
-                divider
-                sx={{ px: "1.5rem", py: "0.75rem", backgroundColor: n.read ? "transparent" : theme.palette.primary.light + "11", gap: "0.75rem", alignItems: "flex-start" }}
-              >
-                <ListItemAvatar sx={{ minWidth: 44, position: "relative" }}>
-                  <Avatar src={n.senderPicture ? `${API_BASE_URL}/assets/${n.senderPicture}` : undefined} sx={{ width: 40, height: 40 }}>
-                    {n.senderName?.[0]}
-                  </Avatar>
-                  <Box sx={{ position: "absolute", bottom: -2, right: -2, bgcolor: "white", borderRadius: "50%", p: "1px" }}>
-                    {notifIcon(n.type)}
-                  </Box>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={<Typography fontSize="0.85rem"><b>{n.senderName}</b> {n.message}</Typography>}
-                  secondary={<Typography fontSize="0.75rem" color={theme.palette.neutral.medium}>{formatTimeAgo(n.createdAt)}</Typography>}
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
+        <ActivityDropdown
+          activities={notifications.map(n => notifToActivity(n, formatTimeAgo))}
+          isDark={isDarkMode}
+          unreadCount={unreadCount}
+        />
       </Popover>
 
-      {/* ── Help & Guidelines Dialog ── */}
-      <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "16px" } }}>
+      {/* ── Help & Guidelines Dialog (Glassmorphism) ── */}
+      <Dialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "20px",
+            background: isDarkMode ? "rgba(13,17,23,0.96)" : "rgba(255,255,255,0.96)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: isDarkMode ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(100,116,139,0.2)",
+            boxShadow: isDarkMode ? "0 24px 48px rgba(0,0,0,0.5)" : "0 16px 36px rgba(0,0,0,0.1)",
+            color: isDarkMode ? "#ffffff" : "#0f172a",
+          }
+        }}
+      >
         <DialogTitle sx={{ fontWeight: 700, fontSize: "1.2rem", pb: 0 }}>
           Help & Guidelines 🤝
         </DialogTitle>
-        <DialogContent sx={{ pt: "0.75rem !important" }}>
+        <DialogContent sx={{ pt: "1.5rem !important" }}>
           {[
             { icon: "🏠", title: "Home Feed", text: "Your feed shows posts from other users — not your own. Like & comment to interact. Double-tap images to like instantly." },
             { icon: "✍️", title: "Creating Posts", text: "Use the post box at the top of your home or profile page. Upload photos or videos, add a description, then Post!" },
@@ -356,11 +433,11 @@ const Navbar = () => {
             { icon: "🔗", title: "Social Profiles", text: "On your profile, click '+' next to 'Social Profiles' to add links to Twitter, LinkedIn, GitHub, Instagram, etc. Others can see and click them." },
             { icon: "🤝", title: "Friends", text: "Click the person-add icon on any post or profile to add a friend. Friends appear in your Friends List widget. You can unfriend the same way." },
           ].map(({ icon, title, text }) => (
-            <Box key={title} mb="0.9rem">
-              <Typography fontWeight="700" fontSize="0.95rem" mb="0.15rem">
+            <Box key={title} mb="1.2rem">
+              <Typography fontWeight="700" fontSize="0.95rem" mb="0.2rem" sx={{ color: isDarkMode ? "#fff" : "#0f172a" }}>
                 {icon} {title}
               </Typography>
-              <Typography fontSize="0.85rem" color={theme.palette.neutral.medium}>
+              <Typography fontSize="0.85rem" sx={{ color: isDarkMode ? "rgba(255,255,255,0.6)" : "#64748b" }}>
                 {text}
               </Typography>
             </Box>
@@ -370,6 +447,49 @@ const Navbar = () => {
           <Button onClick={() => setHelpOpen(false)} variant="contained" sx={{ borderRadius: 8 }}>Got it!</Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Photo Upload Dialog ── */}
+      <Dialog
+        open={picOpen}
+        onClose={() => setPicOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: "20px",
+            background: isDarkMode ? "rgba(13,17,23,0.96)" : "rgba(255,255,255,0.96)",
+            backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+            border: isDarkMode ? "1px solid rgba(255,255,255,0.09)" : "1px solid rgba(100,116,139,0.2)",
+            color: isDarkMode ? "#fff" : "#000",
+            width: "350px", textAlign: "center", p: "1rem"
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Update Profile Photo</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" alignItems="center" gap="1rem">
+            <Avatar
+              src={picPreview || (user.picturePath ? `${API_BASE_URL}/assets/${user.picturePath}` : null)}
+              sx={{ width: 120, height: 120, border: `4px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}` }}
+            />
+            <input
+              type="file" accept="image/*" hidden ref={picInputRef}
+              onChange={(e) => {
+                const f = e.target.files[0];
+                if (f) { setPicFile(f); setPicPreview(URL.createObjectURL(f)); }
+              }}
+            />
+            <Button variant="outlined" startIcon={<PhotoCamera />} onClick={() => picInputRef.current.click()} sx={{ borderRadius: 8 }}>
+              Choose new photo
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", pb: "1rem" }}>
+          <Button onClick={() => { setPicOpen(false); setPicFile(null); setPicPreview(null); }} sx={{ color: "text.secondary" }}>Cancel</Button>
+          <Button onClick={handlePicUpload} variant="contained" disabled={!picFile || picSaving} sx={{ borderRadius: 8 }}>
+            {picSaving ? <CircularProgress size={20} /> : "Save Photo"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </>
   );
 };

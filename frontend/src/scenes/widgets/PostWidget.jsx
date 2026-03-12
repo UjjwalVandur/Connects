@@ -1,24 +1,15 @@
 import {
-  ChatBubbleOutlineOutlined,
-  FavoriteBorderOutlined,
-  FavoriteOutlined,
-  ShareOutlined,
-} from "@mui/icons-material";
-import {
   Box,
   Button,
   Divider,
-  IconButton,
   InputBase,
   Typography,
   useTheme,
-  Tooltip,
   Snackbar,
   Alert,
 } from "@mui/material";
-import FlexBetween from "components/FlexBetween";
 import Friend from "components/Friend";
-import WidgetWrapper from "components/WidgetWrapper";
+import { SocialCard } from "components/ui/social-card";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setPost } from "state";
@@ -38,23 +29,19 @@ const PostWidget = ({
 }) => {
   const [isComments, setIsComments] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [likeAnim, setLikeAnim] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
   const dispatch = useDispatch();
   const token = useSelector((state) => state.token);
   const loggedInUserId = useSelector((state) => state.user._id);
+  const mode = useSelector((state) => state.mode);
+  const isDark = mode === "dark";
+
   const isLiked = Boolean(likes[loggedInUserId]);
   const likeCount = Object.keys(likes).length;
-
   const { palette } = useTheme();
-  const main = palette.neutral.main;
-  const primary = palette.primary.main;
 
+  /* ── API actions ─────────────────────────────────────── */
   const patchLike = async () => {
-    // Trigger animation
-    setLikeAnim(true);
-    setTimeout(() => setLikeAnim(false), 300);
-
     const response = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
       method: "PATCH",
       headers: {
@@ -87,163 +74,140 @@ const PostWidget = ({
     setNewComment("");
   };
 
-  // Parse comment "Name::text" format
   const parseComment = (comment) => {
     const sep = comment.indexOf("::");
     if (sep === -1) return { author: "User", text: comment };
     return { author: comment.substring(0, sep), text: comment.substring(sep + 2) };
   };
 
-  return (
-    <WidgetWrapper m="2rem 0">
-      <Friend
-        friendId={postUserId}
-        name={name}
-        subtitle={location}
-        userPicturePath={userPicturePath}
+  /* ── Media block ─────────────────────────────────────── */
+  const mediaBlock = picturePath ? (
+    <img
+      width="100%"
+      height="auto"
+      alt="post"
+      onDoubleClick={patchLike}
+      style={{ cursor: "pointer", borderRadius: "0.75rem", display: "block" }}
+      src={`${API_BASE_URL}/assets/${picturePath}`}
+    />
+  ) : videoPath ? (
+    <Box borderRadius="0.75rem" overflow="hidden">
+      <video
+        controls
+        width="100%"
+        style={{ borderRadius: "0.75rem", display: "block" }}
+        src={`${API_BASE_URL}/assets/${videoPath}`}
       />
-      <Typography color={main} sx={{ mt: "1rem" }}>
-        {description}
-      </Typography>
+    </Box>
+  ) : null;
 
-      {/* Post Image with double-click to like */}
-      {picturePath && (
-        <Box sx={{ position: "relative" }}>
-          <img
-            width="100%"
-            height="auto"
-            alt="post"
-            onDoubleClick={patchLike}
-            style={{
-              cursor: "pointer",
-              borderRadius: "0.75rem",
-              marginTop: "0.75rem",
-              display: "block",
-            }}
-            src={`${API_BASE_URL}/assets/${picturePath}`}
-          />
-        </Box>
-      )}
-
-      {/* Post Video */}
-      {videoPath && (
-        <Box mt="0.75rem" borderRadius="0.75rem" overflow="hidden">
-          <video
-            controls
-            width="100%"
-            style={{ borderRadius: "0.75rem", display: "block" }}
-            src={`${API_BASE_URL}/assets/${videoPath}`}
-          />
-        </Box>
-      )}
-
-      {/* Actions Row */}
-      <FlexBetween mt="0.5rem">
-        <FlexBetween gap="1rem">
-          {/* Like */}
-          <FlexBetween gap="0.3rem">
-            <Tooltip title={isLiked ? "Unlike" : "Like"}>
-              <IconButton
-                onClick={patchLike}
-                sx={{
-                  transition: "transform 0.15s ease",
-                  transform: likeAnim ? "scale(1.35)" : "scale(1)",
-                }}
-              >
-                {isLiked ? (
-                  <FavoriteOutlined sx={{ color: primary }} />
-                ) : (
-                  <FavoriteBorderOutlined />
-                )}
-              </IconButton>
-            </Tooltip>
-            <Typography
-              fontWeight="600"
+  /* ── Comments section (rendered as children of SocialCard) ── */
+  const commentsNode = isComments && (
+    <Box sx={{ px: "1.25rem", pb: "1rem", pt: "0.25rem" }}>
+      {comments.map((comment, i) => {
+        const { author, text } = parseComment(comment);
+        return (
+          <Box key={`${name}-${i}`}>
+            <Divider
               sx={{
-                transition: "color 0.2s",
-                color: isLiked ? primary : main,
+                borderColor: isDark
+                  ? "rgba(255,255,255,0.07)"
+                  : "rgba(0,0,0,0.07)",
               }}
-            >
-              {likeCount}
-            </Typography>
-          </FlexBetween>
-
-          {/* Comment */}
-          <FlexBetween gap="0.3rem">
-            <Tooltip title="Comments">
-              <IconButton onClick={() => setIsComments(!isComments)}>
-                <ChatBubbleOutlineOutlined />
-              </IconButton>
-            </Tooltip>
-            <Typography>{comments.length}</Typography>
-          </FlexBetween>
-        </FlexBetween>
-
-        {/* Share */}
-        <Tooltip title="Copy link">
-          <IconButton onClick={handleShare}>
-            <ShareOutlined />
-          </IconButton>
-        </Tooltip>
-      </FlexBetween>
-
-      {/* Comments section */}
-      {isComments && (
-        <Box mt="0.5rem">
-          {comments.map((comment, i) => {
-            const { author, text } = parseComment(comment);
-            return (
-              <Box key={`${name}-${i}`}>
-                <Divider />
-                <Box sx={{ display: "flex", gap: "0.5rem", m: "0.5rem 0", pl: "1rem", alignItems: "baseline" }}>
-                  <Typography
-                    fontWeight="700"
-                    fontSize="0.85rem"
-                    color={primary}
-                  >
-                    {author}
-                  </Typography>
-                  <Typography color={main} fontSize="0.9rem">
-                    {text}
-                  </Typography>
-                </Box>
-              </Box>
-            );
-          })}
-          <Divider />
-          <FlexBetween mt="0.75rem" gap="0.5rem">
-            <InputBase
-              placeholder="Add a comment..."
-              onChange={(e) => setNewComment(e.target.value)}
-              value={newComment}
-              fullWidth
-              sx={{
-                backgroundColor: palette.neutral.light,
-                borderRadius: "1.5rem",
-                padding: "0.5rem 1.5rem",
-                fontSize: "0.9rem",
-              }}
-              onKeyDown={(e) => { if (e.key === "Enter") submitComment(); }}
             />
-            <Button
-              onClick={submitComment}
-              disabled={!newComment.trim()}
-              sx={{
-                color: palette.background.alt,
-                backgroundColor: palette.primary.main,
-                borderRadius: "2rem",
-                px: "1.5rem",
-                "&:hover": { backgroundColor: palette.primary.dark },
-                "&:disabled": { opacity: 0.5 },
-              }}
-            >
-              Post
-            </Button>
-          </FlexBetween>
-        </Box>
-      )}
+            <Box sx={{ display: "flex", gap: "0.5rem", m: "0.5rem 0", alignItems: "baseline" }}>
+              <Typography fontWeight="700" fontSize="0.8rem" color={palette.primary.main}>
+                {author}
+              </Typography>
+              <Typography
+                fontSize="0.85rem"
+                sx={{ color: isDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)" }}
+              >
+                {text}
+              </Typography>
+            </Box>
+          </Box>
+        );
+      })}
+      <Divider
+        sx={{
+          borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+          mb: "0.75rem",
+        }}
+      />
+      <Box sx={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <InputBase
+          placeholder="Add a comment…"
+          onChange={(e) => setNewComment(e.target.value)}
+          value={newComment}
+          fullWidth
+          sx={{
+            backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+            borderRadius: "1.5rem",
+            padding: "0.4rem 1.2rem",
+            fontSize: "0.85rem",
+            color: isDark ? "#fff" : "#1a1a1a",
+          }}
+          onKeyDown={(e) => { if (e.key === "Enter") submitComment(); }}
+        />
+        <Button
+          onClick={submitComment}
+          disabled={!newComment.trim()}
+          sx={{
+            color: palette.background.alt,
+            backgroundColor: palette.primary.main,
+            borderRadius: "2rem",
+            px: "1.2rem",
+            fontSize: "0.8rem",
+            minWidth: "unset",
+            whiteSpace: "nowrap",
+            "&:hover": { backgroundColor: palette.primary.dark },
+            "&:disabled": { opacity: 0.5 },
+          }}
+        >
+          Post
+        </Button>
+      </Box>
+    </Box>
+  );
 
-      {/* Share snackbar */}
+  return (
+    <>
+      <SocialCard
+        isDark={isDark}
+        author={{
+          name,
+          subtitle: location,
+          avatar: userPicturePath
+            ? `${API_BASE_URL}/assets/${userPicturePath}`
+            : undefined,
+        }}
+        content={{
+          text: description,
+          media: mediaBlock,
+        }}
+        engagement={{
+          isLiked,
+          isBookmarked: false,
+          likes: likeCount,
+          comments: comments.length,
+        }}
+        onLike={patchLike}
+        onComment={() => setIsComments((v) => !v)}
+        onShare={handleShare}
+        headerExtra={
+          <Friend
+            friendId={postUserId}
+            name={name}
+            subtitle={location}
+            userPicturePath={userPicturePath}
+          />
+        }
+        className="mb-4"
+      >
+        {commentsNode}
+      </SocialCard>
+
       <Snackbar
         open={snackOpen}
         autoHideDuration={2500}
@@ -254,7 +218,7 @@ const PostWidget = ({
           Link copied to clipboard!
         </Alert>
       </Snackbar>
-    </WidgetWrapper>
+    </>
   );
 };
 

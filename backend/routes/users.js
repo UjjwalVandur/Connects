@@ -8,6 +8,9 @@ import {
   updateAdvert,
   deleteAdvert,
   getRandomAd,
+  incrementViewedProfile,
+  getPostCount,
+  updateProfilePicture,
 } from "../controllers/users.js";
 import verifyToken from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
@@ -19,7 +22,10 @@ router.get("/search",           verifyToken, searchUsers);
 router.get("/advert/random",    verifyToken, getRandomAd);
 
 // ── Own-profile routes with static second segment ────────────
+router.patch("/:id/picture",    verifyToken, upload.single("picture"), updateProfilePicture);
 router.patch("/:id/socials",    verifyToken, updateSocialProfiles);
+router.patch("/:id/view",       verifyToken, incrementViewedProfile);
+router.get("/:id/post-count",   verifyToken, getPostCount);
 router.patch("/:id/advert",     verifyToken, upload.single("media"), updateAdvert);
 router.delete("/:id/advert",    verifyToken, deleteAdvert);
 

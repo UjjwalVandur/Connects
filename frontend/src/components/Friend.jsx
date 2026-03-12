@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { setFriends } from "state";
 import FlexBetween from "./FlexBetween";
 import UserImage from "./UserImage";
+import ProfileCardPopover from "components/ui/profile-card-popover";
 
 const Friend = ({ friendId, name, subtitle, userPicturePath }) => {
   const dispatch = useDispatch();
@@ -48,19 +49,21 @@ const Friend = ({ friendId, name, subtitle, userPicturePath }) => {
             navigate(0);
           }}
         >
-          <Typography
-            color={main}
-            variant="h5"
-            fontWeight="500"
-            sx={{
-              "&:hover": {
-                color: palette.primary.light,
-                cursor: "pointer",
-              },
-            }}
-          >
-            {name}
-          </Typography>
+          <ProfileCardPopover userId={friendId}>
+            <Typography
+              color={main}
+              variant="h5"
+              fontWeight="500"
+              sx={{
+                "&:hover": {
+                  color: palette.primary.light,
+                  cursor: "pointer",
+                },
+              }}
+            >
+              {name}
+            </Typography>
+          </ProfileCardPopover>
           <Typography color={medium} fontSize="0.75rem">
             {subtitle}
           </Typography>

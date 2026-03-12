@@ -6,12 +6,13 @@ import {
 } from "@mui/material";
 import {
   AddOutlined, DeleteOutlined, OpenInNewOutlined,
-  CampaignOutlined, EditOutlined, ArrowBackIos, ArrowForwardIos,
+  CampaignOutlined, EditOutlined,
 } from "@mui/icons-material";
 import { useDropzone } from "react-dropzone";
 import { useSelector } from "react-redux";
 import FlexBetween from "components/FlexBetween";
 import WidgetWrapper from "components/WidgetWrapper";
+import { AdCardStack } from "components/ui/ad-card-stack";
 import API_BASE_URL from "config";
 import { HelpOutlineOutlined } from "@mui/icons-material";
 
@@ -47,6 +48,33 @@ const HelpDialog = ({ open, onClose }) => {
 /* ── Create Ad Dialog ─────────────────────────────────────── */
 const CreateAdDialog = ({ open, onClose, token, userId, onSaved }) => {
   const { palette } = useTheme();
+  const mode = useSelector((s) => s.mode);
+  const isDark = mode === "dark";
+
+  /* Glass card colour tokens */
+  const paperBg  = isDark ? "rgba(13,17,23,0.97)"       : "rgba(255,255,255,0.97)";
+  const paperBdr = isDark ? "rgba(255,255,255,0.09)"    : "rgba(100,116,139,0.2)";
+  const textPri  = isDark ? "#ffffff"                    : "#0f172a";
+  const textSec  = isDark ? "rgba(255,255,255,0.6)"     : "#64748b";
+  const inputBg  = isDark ? "rgba(255,255,255,0.06)"    : "rgba(0,0,0,0.03)";
+  const inputClr = isDark ? "#ffffff"                    : "#0f172a";
+  const labelClr = isDark ? "rgba(255,255,255,0.55)"    : "#64748b";
+  const shadow   = isDark ? "0 24px 48px rgba(0,0,0,0.55)" : "0 16px 36px rgba(0,0,0,0.12)";
+  const dropzoneBg = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.025)";
+
+  const fieldSx = {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: inputBg,
+      color: inputClr,
+      "& fieldset": { borderColor: paperBdr },
+      "&:hover fieldset": { borderColor: isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.3)" },
+      "&.Mui-focused fieldset": { borderColor: palette.primary.main },
+    },
+    "& .MuiInputLabel-root": { color: labelClr },
+    "& .MuiInputLabel-root.Mui-focused": { color: palette.primary.main },
+    "& .MuiInputBase-inputMultiline": { color: inputClr },
+  };
+
   const [title,       setTitle]   = useState("");
   const [description, setDesc]    = useState("");
   const [link,        setLink]    = useState("");
@@ -90,31 +118,48 @@ const CreateAdDialog = ({ open, onClose, token, userId, onSaved }) => {
   };
 
   return (
-    <Dialog open={open} onClose={() => { reset(); onClose(); }} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: "16px" } }}>
-      <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem" }}>
+    <Dialog
+      open={open}
+      onClose={() => { reset(); onClose(); }}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: "20px",
+          background: paperBg,
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: `1.5px solid ${paperBdr}`,
+          boxShadow: shadow,
+          color: textPri,
+        },
+      }}
+      BackdropProps={{ sx: { backdropFilter: "blur(12px)", background: "rgba(0,0,0,0.5)" } }}
+    >
+      <DialogTitle sx={{ fontWeight: 700, fontSize: "1.1rem", color: textPri }}>
         <FlexBetween>
           <Box display="flex" alignItems="center" gap="0.5rem">
             <CampaignOutlined color="primary" />
             Create Sponsored Ad
           </Box>
           <Tooltip title="View Ad Guidelines">
-            <IconButton size="small" onClick={() => setHelpOpen(true)}>
+            <IconButton size="small" onClick={() => setHelpOpen(true)} sx={{ color: textSec }}>
               <HelpOutlineOutlined fontSize="small" />
             </IconButton>
           </Tooltip>
         </FlexBetween>
       </DialogTitle>
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: "0.9rem", pt: "0.5rem !important" }}>
-        <TextField label="Ad Title *" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth size="small" />
-        <TextField label="Description" value={description} onChange={(e) => setDesc(e.target.value)} fullWidth size="small" multiline rows={3} />
-        <TextField label="Product / Service URL" value={link} onChange={(e) => setLink(e.target.value)} fullWidth size="small" placeholder="https://your-website.com" />
+        <TextField label="Ad Title *" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth size="small" sx={fieldSx} />
+        <TextField label="Description" value={description} onChange={(e) => setDesc(e.target.value)} fullWidth size="small" multiline rows={3} sx={fieldSx} />
+        <TextField label="Product / Service URL" value={link} onChange={(e) => setLink(e.target.value)} fullWidth size="small" placeholder="https://your-website.com" sx={fieldSx} />
         <Box
           {...getRootProps()}
           sx={{
-            border: `2px dashed ${isDragActive ? palette.primary.main : palette.neutral.medium}`,
+            border: `2px dashed ${isDragActive ? palette.primary.main : paperBdr}`,
             borderRadius: "12px", p: "1.2rem",
             textAlign: "center", cursor: "pointer",
-            backgroundColor: isDragActive ? palette.primary.light + "22" : palette.neutral.light,
+            backgroundColor: isDragActive ? palette.primary.main + "18" : dropzoneBg,
             transition: "all 0.2s",
           }}
         >
@@ -126,15 +171,24 @@ const CreateAdDialog = ({ open, onClose, token, userId, onSaved }) => {
               <img src={preview} alt="preview" style={{ maxWidth: "100%", maxHeight: 160, borderRadius: 8, objectFit: "cover" }} />
             )
           ) : (
-            <Typography color={palette.neutral.medium} fontSize="0.85rem">
+            <Typography sx={{ fontSize: "0.85rem", color: textSec }}>
               📸 Drag & drop a photo or video, or click to select
             </Typography>
           )}
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: "1.5rem", pb: "1.5rem" }}>
-        <Button onClick={() => { reset(); onClose(); }} variant="outlined" sx={{ borderRadius: 8 }}>Cancel</Button>
-        <Button onClick={handleSave} disabled={!title.trim() || saving} variant="contained" sx={{ borderRadius: 8, px: "1.5rem" }}>
+        <Button
+          onClick={() => { reset(); onClose(); }}
+          variant="outlined"
+          sx={{ borderRadius: 8, borderColor: paperBdr, color: textSec, "&:hover": { borderColor: textSec } }}
+        >Cancel</Button>
+        <Button
+          onClick={handleSave}
+          disabled={!title.trim() || saving}
+          variant="contained"
+          sx={{ borderRadius: 8, px: "1.5rem" }}
+        >
           {saving ? <CircularProgress size={18} /> : "Publish Ad"}
         </Button>
       </DialogActions>
@@ -152,6 +206,8 @@ const AdvertWidget = () => {
   const medium = palette.neutral.medium;
   const token          = useSelector((s) => s.token);
   const loggedInUserId = useSelector((s) => s.user._id);
+  const mode           = useSelector((s) => s.mode);
+  const isDark         = mode === "dark";
 
   const [ads,        setAds]      = useState([]);
   const [index,      setIndex]    = useState(0);
@@ -205,10 +261,6 @@ const AdvertWidget = () => {
     setIndex(0);
   };
 
-  const ad       = ads[index];
-  const isMyAd   = ad && String(ad.userId) === String(loggedInUserId);
-  const mediaUrl = ad?.mediaPath ? `${API_BASE_URL}/assets/${ad.mediaPath}` : null;
-  const isVideo  = ad?.mediaType === "video";
 
   return (
     <>
@@ -216,36 +268,23 @@ const AdvertWidget = () => {
         {/* Header */}
         <FlexBetween mb="0.5rem">
           <Typography color={dark} variant="h5" fontWeight="500">Sponsored</Typography>
-          <Box display="flex" alignItems="center" gap="0.5rem">
-            {ads.length > 1 && (
-              <>
-                <IconButton size="small" onClick={() => setIndex((i) => (i - 1 + ads.length) % ads.length)}>
-                  <ArrowBackIos sx={{ fontSize: 14 }} />
-                </IconButton>
-                <Typography fontSize="0.75rem" color={medium}>{index + 1}/{ads.length}</Typography>
-                <IconButton size="small" onClick={() => setIndex((i) => (i + 1) % ads.length)}>
-                  <ArrowForwardIos sx={{ fontSize: 14 }} />
-                </IconButton>
-              </>
-            )}
-            <Tooltip title="Create a new sponsored ad (your previous ads are kept!)">
-              <Chip
-                icon={<AddOutlined />}
-                label="Create Ad"
-                onClick={() => setOpen(true)}
-                size="small"
-                clickable
-                sx={{ fontWeight: 600, cursor: "pointer", bgcolor: palette.primary.light + "33", color: palette.primary.dark }}
-              />
-            </Tooltip>
-          </Box>
+          <Tooltip title="Create a new sponsored ad (your previous ads are kept!)">
+            <Chip
+              icon={<AddOutlined />}
+              label="Create Ad"
+              onClick={() => setOpen(true)}
+              size="small"
+              clickable
+              sx={{ fontWeight: 600, cursor: "pointer", bgcolor: palette.primary.light + "33", color: palette.primary.dark }}
+            />
+          </Tooltip>
         </FlexBetween>
 
         {!loaded && (
           <Box display="flex" justifyContent="center" py="2rem"><CircularProgress size={26} /></Box>
         )}
 
-        {loaded && !ad && (
+        {loaded && !ads.length && (
           <Box textAlign="center" py="1.5rem">
             <Typography color={medium} fontSize="0.85rem" mb="0.75rem">
               No sponsored ads yet. Be the first to promote!
@@ -256,62 +295,15 @@ const AdvertWidget = () => {
           </Box>
         )}
 
-        {loaded && ad && (
-          <>
-            {/* Media */}
-            {isVideo && mediaUrl ? (
-              <video src={mediaUrl} controls style={{ width: "100%", borderRadius: "0.75rem", margin: "0.75rem 0", maxHeight: 240, objectFit: "cover" }} />
-            ) : mediaUrl ? (
-              <img width="100%" alt="advert" src={mediaUrl} style={{ borderRadius: "0.75rem", margin: "0.75rem 0", maxHeight: 240, objectFit: "cover", display: "block" }} />
-            ) : (
-              <Box sx={{ borderRadius: "0.75rem", my: "0.75rem", height: 90, bgcolor: palette.neutral.light, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <CampaignOutlined sx={{ fontSize: 36, color: palette.neutral.medium }} />
-              </Box>
-            )}
-
-            {/* Ad info row */}
-            <FlexBetween>
-              <Box display="flex" alignItems="center" gap="0.5rem">
-                <Avatar src={ad.picturePath ? `${API_BASE_URL}/assets/${ad.picturePath}` : undefined} sx={{ width: 26, height: 26, fontSize: "0.72rem" }}>
-                  {ad.firstName?.[0]}
-                </Avatar>
-                <Typography color={main} fontWeight="700" fontSize="0.9rem">
-                  {ad.title}
-                </Typography>
-              </Box>
-              <Box display="flex">
-                {isMyAd && (
-                  <Tooltip title="Delete this ad">
-                    <IconButton size="small" color="error" onClick={() => handleDelete(ad._id)}>
-                      <DeleteOutlined fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                )}
-                {ad.link && (
-                  <Tooltip title="Visit website">
-                    <IconButton size="small" onClick={() => window.open(ad.link.startsWith("http") ? ad.link : `https://${ad.link}`, "_blank")}>
-                      <OpenInNewOutlined fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Box>
-            </FlexBetween>
-
-            {ad.link && (
-              <Typography color="primary" fontSize="0.77rem"
-                sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
-                onClick={() => window.open(ad.link.startsWith("http") ? ad.link : `https://${ad.link}`, "_blank")}
-              >
-                {ad.link}
-              </Typography>
-            )}
-            {ad.description && (
-              <Typography color={medium} fontSize="0.85rem" mt="0.3rem">{ad.description}</Typography>
-            )}
-            <Typography color={medium} fontSize="0.7rem" mt="0.4rem">
-              Promoted by {ad.firstName} {ad.lastName}
-            </Typography>
-          </>
+        {loaded && ads.length > 0 && (
+          <Box mt="1rem" mb="0.5rem">
+            <AdCardStack
+              ads={ads}
+              isDark={isDark}
+              myUserId={loggedInUserId}
+              onDelete={handleDelete}
+            />
+          </Box>
         )}
       </WidgetWrapper>
 

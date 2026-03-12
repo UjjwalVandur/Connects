@@ -1,4 +1,23 @@
 import User from "../models/User.js";
+import Post from "../models/Post.js";
+
+/* ── PATCH /users/:id/picture ─── update profile picture ────── */
+export const updateProfilePicture = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const picturePath = req.file.originalname;
+    const user = await User.findByIdAndUpdate(
+      id,
+      { picturePath },
+      { new: true }
+    ).select("-password");
+    res.status(200).json({ picturePath: user.picturePath });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 /* ── GET /users/search?q=... ─────────────────────────────── */
 export const searchUsers = async (req, res) => {
@@ -159,6 +178,35 @@ export const deleteAdvert = async (req, res) => {
       $unset: { advert: "" },
     });
     res.status(200).json({ message: "Ad deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── PATCH /users/:id/view ─── increment profile view count ─── */
+export const incrementViewedProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const viewerId = req.user.id;
+    // Don't count own visits
+    if (viewerId === id) return res.status(200).json({ message: "own visit" });
+    const user = await User.findByIdAndUpdate(
+      id,
+      { $inc: { viewedProfile: 1 } },
+      { new: true }
+    ).select("viewedProfile");
+    res.status(200).json({ viewedProfile: user.viewedProfile });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── GET /users/:id/post-count ─── total posts by user ──────── */
+export const getPostCount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const count = await Post.countDocuments({ userId: id });
+    res.status(200).json({ count });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

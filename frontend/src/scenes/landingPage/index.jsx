@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform, useAnimation, useInView } from "framer-motion";
 import { ContainerScroll } from "components/ui/ContainerScrollAnimation";
+import { BackgroundBeams } from "components/ui/background-beams";
 
 /* ─── tiny reusable fade-in wrapper ─── */
 const FadeIn = ({ children, delay = 0, y = 40 }) => {
@@ -456,7 +457,9 @@ const LandingPage = () => {
   const [hoverBtn, setHoverBtn] = React.useState(null);
 
   return (
-    <div style={S.page}>
+    <div style={{ ...S.page, position: "relative" }}>
+      <BackgroundBeams className="fixed inset-0 z-0 pointer-events-none" />
+      <div style={{ position: "relative", zIndex: 1 }}>
       {/* NAV */}
       <nav style={S.nav}>
         <span style={S.logo}>✦ Connects</span>
@@ -659,6 +662,7 @@ const LandingPage = () => {
           ))}
         </div>
       </footer>
+      </div>
     </div>
   );
 };

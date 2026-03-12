@@ -88,11 +88,16 @@ const MyPostWidget = ({ picturePath }) => {
           value={post}
           sx={{
             width: "100%",
-            backgroundColor: palette.neutral.light,
+            backgroundColor: palette.mode === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
             borderRadius: "2rem",
-            padding: "0.75rem 2rem",
+            padding: "0.85rem 1.5rem",
             fontSize: "0.95rem",
-            "&:focus-within": { outline: `2px solid ${palette.primary.light}` },
+            border: `1px solid ${palette.mode === "dark" ? "rgba(255,255,255,0.1)" : "rgba(100,116,139,0.2)"}`,
+            transition: "all 0.2s",
+            "&:focus-within": { 
+              borderColor: palette.mode === "dark" ? "#00D5FA" : "#00A0BC",
+              boxShadow: `0 0 0 3px ${palette.mode === "dark" ? "rgba(0,213,250,0.2)" : "rgba(0,160,188,0.2)"}`
+            },
           }}
         />
       </FlexBetween>
@@ -242,12 +247,14 @@ const MyPostWidget = ({ picturePath }) => {
           disabled={!post && !image && !video}
           onClick={handlePost}
           sx={{
-            color: palette.background.alt,
-            backgroundColor: palette.primary.main,
+            color: "#ffffff",
+            background: "linear-gradient(135deg,#00D5FA,#0077FF)",
             borderRadius: "3rem",
-            px: "1.5rem",
-            "&:hover": { backgroundColor: palette.primary.dark },
-            "&:disabled": { opacity: 0.5 },
+            px: "1.75rem",
+            fontWeight: 600,
+            transition: "all 0.2s",
+            "&:hover": { opacity: 0.9, transform: "scale(1.02)", boxShadow: "0 4px 12px rgba(0,213,250,0.3)" },
+            "&:disabled": { background: palette.neutral.light, color: palette.neutral.medium, opacity: 0.6, boxShadow: "none" },
           }}
         >
           POST
