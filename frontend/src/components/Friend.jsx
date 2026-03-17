@@ -1,4 +1,4 @@
-import { PersonAddOutlined, PersonRemoveOutlined } from "@mui/icons-material";
+import { PersonAddOutlined, PersonRemoveOutlined, CancelOutlined, CheckCircleOutline } from "@mui/icons-material";
 import API_BASE_URL from "config";
 import { Box, IconButton, Typography, useTheme } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
@@ -21,12 +21,48 @@ const Friend = ({ friendId, name, subtitle, userPicturePath }) => {
   const main = palette.neutral.main;
   const medium = palette.neutral.medium;
 
-  const isFriend = friends.find((friend) => friend._id === friendId);
+  const isFriend = Array.isArray(friends) ? friends.find((friend) => friend._id === friendId) : false;
+  const sentFriendRequests = useSelector((state) => state.user.sentFriendRequests || []);
+  const friendRequests = useSelector((state) => state.user.friendRequests || []);
+  
+  const hasSentRequest = Array.isArray(sentFriendRequests) ? sentFriendRequests.find((req) => req._id === friendId) : false;
+  const hasReceivedRequest = Array.isArray(friendRequests) ? friendRequests.find((req) => req._id === friendId) : false;
+  
   const isOwnPost = friendId === _id; // Don't show add/remove button for own posts
 
   const patchFriend = async () => {
     const response = await fetch(
       `${API_BASE_URL}/users/${_id}/${friendId}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    const data = await response.json();
+    dispatch(setFriends({ friends: data }));
+  };
+
+  const acceptFriend = async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/users/${_id}/${friendId}/accept`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    const data = await response.json();
+    dispatch(setFriends({ friends: data }));
+  };
+
+  const rejectFriend = async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/users/${_id}/${friendId}/reject`,
       {
         method: "PATCH",
         headers: {
@@ -72,16 +108,37 @@ const Friend = ({ friendId, name, subtitle, userPicturePath }) => {
 
       {/* Don't show friend/unfriend button on own posts */}
       {!isOwnPost && (
-        <IconButton
-          onClick={() => patchFriend()}
-          sx={{ backgroundColor: primaryLight, p: "0.6rem" }}
-        >
-          {isFriend ? (
-            <PersonRemoveOutlined sx={{ color: primaryDark }} />
+        <FlexBetween gap="0.5rem">
+          {hasReceivedRequest ? (
+            <>
+              <IconButton
+                onClick={() => acceptFriend()}
+                sx={{ backgroundColor: primaryLight, p: "0.6rem" }}
+              >
+                <CheckCircleOutline sx={{ color: primaryDark }} />
+              </IconButton>
+              <IconButton
+                onClick={() => rejectFriend()}
+                sx={{ backgroundColor: palette.error ? palette.error.light : "#ffebee", p: "0.6rem" }}
+              >
+                <CancelOutlined sx={{ color: palette.error ? palette.error.dark : "#c62828" }} />
+              </IconButton>
+            </>
           ) : (
-            <PersonAddOutlined sx={{ color: primaryDark }} />
+            <IconButton
+              onClick={() => patchFriend()}
+              sx={{ backgroundColor: primaryLight, p: "0.6rem" }}
+            >
+              {isFriend ? (
+                <PersonRemoveOutlined sx={{ color: primaryDark }} />
+              ) : hasSentRequest ? (
+                <CancelOutlined sx={{ color: primaryDark }} />
+              ) : (
+                <PersonAddOutlined sx={{ color: primaryDark }} />
+              )}
+            </IconButton>
           )}
-        </IconButton>
+        </FlexBetween>
       )}
     </FlexBetween>
   );

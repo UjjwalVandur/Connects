@@ -71,7 +71,16 @@ const MessagesPage = () => {
   useEffect(() => {
     fetch(`${API_BASE_URL}/users/${user._id}/friends`, {
       headers: { Authorization: `Bearer ${token}` },
-    }).then((r) => r.json()).then(setFriends);
+    }).then((r) => r.json()).then((data) => {
+      // Handle both old format (array) and new format (object with arrays)
+      if (Array.isArray(data)) {
+        setFriends(data);
+      } else if (data && typeof data === 'object' && Array.isArray(data.friends)) {
+        setFriends(data.friends);
+      } else {
+        setFriends([]);
+      }
+    });
   }, [user._id, token]);
 
   // Load conversation

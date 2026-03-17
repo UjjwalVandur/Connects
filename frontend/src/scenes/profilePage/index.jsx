@@ -1,4 +1,4 @@
-import { Box, useMediaQuery } from "@mui/material";
+import { Box, useMediaQuery, Tabs, Tab } from "@mui/material";
 import API_BASE_URL from "config";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
@@ -7,10 +7,11 @@ import Navbar from "scenes/navbar";
 import FriendListWidget from "scenes/widgets/FriendListWidget";
 import MyPostWidget from "scenes/widgets/MyPostWidget";
 import PostsWidget from "scenes/widgets/PostsWidget";
-import UserWidget from "scenes/widgets/UserWidget";
+import FreelancerProfileCardWidget from "scenes/widgets/FreelancerProfileCardWidget";
 import CanvasRevealEffect from "components/ui/CanvasRevealEffect";
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
+  const [currentTab, setCurrentTab] = useState("myPosts");
   const { userId } = useParams();
   const token = useSelector((state) => state.token);
   const loggedInUserId = useSelector((state) => state.user._id);
@@ -88,10 +89,9 @@ const ProfilePage = () => {
         justifyContent="center"
       >
         <Box flexBasis={isNonMobileScreens ? "26%" : undefined}>
-          <UserWidget
+          <FreelancerProfileCardWidget
             userId={userId}
             picturePath={user.picturePath}
-            isOwnProfile={isOwnProfile}
           />
           <Box m="2rem 0" />
           <FriendListWidget userId={userId} />
@@ -101,14 +101,43 @@ const ProfilePage = () => {
           flexBasis={isNonMobileScreens ? "42%" : undefined}
           mt={isNonMobileScreens ? undefined : "2rem"}
         >
-          {/* Only the profile owner can create posts */}
+          {/* Only the profile owner can create posts and see tabs */}
           {isOwnProfile && (
             <>
               <MyPostWidget picturePath={user.picturePath} />
               <Box m="2rem 0" />
+              <Box sx={{ width: '100%', mb: '2rem' }}>
+                <Tabs
+                  value={currentTab}
+                  onChange={(e, newValue) => setCurrentTab(newValue)}
+                  textColor="primary"
+                  indicatorColor="primary"
+                  centered
+                  sx={{
+                    "& .MuiTabs-indicator": {
+                      backgroundColor: isDark ? "#00D5FA" : "#00A0BC",
+                    },
+                    "& .MuiTab-root": {
+                      color: isDark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.7)",
+                      fontWeight: "bold",
+                    },
+                    "& .Mui-selected": {
+                      color: isDark ? "#00D5FA !important" : "#00A0BC !important",
+                    }
+                  }}
+                >
+                  <Tab label="My Posts" value="myPosts" />
+                  <Tab label="Saved Posts" value="savedPosts" />
+                </Tabs>
+              </Box>
             </>
           )}
-          <PostsWidget userId={userId} isProfile />
+          
+          {currentTab === "myPosts" || !isOwnProfile ? (
+            <PostsWidget userId={userId} isProfile />
+          ) : (
+            <PostsWidget userId={userId} isSaved />
+          )}
         </Box>
       </Box>
       </div>

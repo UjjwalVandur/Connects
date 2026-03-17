@@ -62,61 +62,182 @@ export const getUser = async (req, res) => {
 
 /* ── GET /users/:id/friends ──────────────────────────────── */
 export const getUserFriends = async (req, res) => {
-  const { id } = req.params;
-  const user = await User.findById(id);
-  if (!user) return res.status(404).json({ message: "User not found" });
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-  const friends = await Promise.all(
-    user.friends.map((friendId) =>
-      User.findById(friendId).select("-password")
-    )
-  );
+    const formatUsers = async (userIds) => {
+      const users = await Promise.all(
+        userIds.map((uid) => User.findById(uid).select("-password"))
+      );
+      return users.filter(Boolean).map(
+        ({ _id, firstName, lastName, occupation, location, picturePath }) => ({
+          _id, firstName, lastName, occupation, location, picturePath,
+        })
+      );
+    };
 
-  const formatted = friends.filter(Boolean).map(
-    ({ _id, firstName, lastName, occupation, location, picturePath }) => ({
-      _id, firstName, lastName, occupation, location, picturePath,
-    })
-  );
+    const formattedFriends = await formatUsers(user.friends);
+    const formattedRequests = await formatUsers(user.friendRequests);
+    const formattedSent = await formatUsers(user.sentFriendRequests);
 
-  res.status(200).json(formatted);
+    res.status(200).json({
+      friends: formattedFriends,
+      friendRequests: formattedRequests,
+      sentFriendRequests: formattedSent
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
-/* ── PATCH /users/:id/:friendId ─────────────────────────── */
+/* ── PATCH /users/:id/:friendId ─── Send/Cancel Request or Remove Friend ── */
 export const addRemoveFriend = async (req, res) => {
-  const { id, friendId } = req.params;
-  if (id === friendId)
-    return res.status(400).json({ message: "Cannot friend yourself" });
+  try {
+    const { id, friendId } = req.params;
+    if (id === friendId)
+      return res.status(400).json({ message: "Cannot friend yourself" });
 
-  const user   = await User.findById(id);
-  const friend = await User.findById(friendId);
+    const user   = await User.findById(id);
+    const friend = await User.findById(friendId);
 
-  if (!user || !friend)
-    return res.status(404).json({ message: "User not found" });
+    if (!user || !friend)
+      return res.status(404).json({ message: "User not found" });
 
-  const isFriend = user.friends.includes(friendId);
+    const isFriend = user.friends.includes(friendId);
+    const hasSentRequest = user.sentFriendRequests.includes(friendId);
+    const hasReceivedRequest = user.friendRequests.includes(friendId);
 
-  if (isFriend) {
-    user.friends   = user.friends.filter((fid) => fid !== friendId);
-    friend.friends = friend.friends.filter((fid) => fid !== id);
-  } else {
-    user.friends.push(friendId);
-    friend.friends.push(id);
+    if (isFriend) {
+      // Remove friend
+      user.friends = user.friends.filter((fid) => fid !== friendId);
+      friend.friends = friend.friends.filter((fid) => fid !== id);
+    } else if (hasSentRequest) {
+      // Cancel request
+      user.sentFriendRequests = user.sentFriendRequests.filter((fid) => fid !== friendId);
+      friend.friendRequests = friend.friendRequests.filter((fid) => fid !== id);
+    } else if (hasReceivedRequest) {
+      // Accept request (shortcut)
+      user.friendRequests = user.friendRequests.filter((fid) => fid !== friendId);
+      friend.sentFriendRequests = friend.sentFriendRequests.filter((fid) => fid !== id);
+      user.friends.push(friendId);
+      friend.friends.push(id);
+    } else {
+      // Send request
+      user.sentFriendRequests.push(friendId);
+      friend.friendRequests.push(id);
+    }
+
+    await user.save();
+    await friend.save();
+
+    const formatUsers = async (userIds) => {
+      const users = await Promise.all(
+        userIds.map((uid) => User.findById(uid).select("-password"))
+      );
+      return users.filter(Boolean).map(
+        ({ _id, firstName, lastName, occupation, location, picturePath }) => ({
+          _id, firstName, lastName, occupation, location, picturePath,
+        })
+      );
+    };
+
+    res.status(200).json({
+      friends: await formatUsers(user.friends),
+      friendRequests: await formatUsers(user.friendRequests),
+      sentFriendRequests: await formatUsers(user.sentFriendRequests)
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
+};
 
-  await user.save();
-  await friend.save();
+/* ── PATCH /users/:id/:friendId/accept ─── Accept Friend Request ── */
+export const acceptFriendRequest = async (req, res) => {
+  try {
+    const { id, friendId } = req.params;
+    if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
 
-  const updatedFriends = await Promise.all(
-    user.friends.map((fid) => User.findById(fid).select("-password"))
-  );
+    const user = await User.findById(id);
+    const friend = await User.findById(friendId);
 
-  const formatted = updatedFriends.filter(Boolean).map(
-    ({ _id, firstName, lastName, occupation, location, picturePath }) => ({
-      _id, firstName, lastName, occupation, location, picturePath,
-    })
-  );
+    if (!user || !friend)
+      return res.status(404).json({ message: "User not found" });
 
-  res.status(200).json(formatted);
+    if (user.friendRequests.includes(friendId)) {
+      user.friendRequests = user.friendRequests.filter((fid) => fid !== friendId);
+      friend.sentFriendRequests = friend.sentFriendRequests.filter((fid) => fid !== id);
+      
+      if (!user.friends.includes(friendId)) {
+        user.friends.push(friendId);
+        friend.friends.push(id);
+      }
+      
+      await user.save();
+      await friend.save();
+    }
+
+    const formatUsers = async (userIds) => {
+      const users = await Promise.all(
+        userIds.map((uid) => User.findById(uid).select("-password"))
+      );
+      return users.filter(Boolean).map(
+        ({ _id, firstName, lastName, occupation, location, picturePath }) => ({
+          _id, firstName, lastName, occupation, location, picturePath,
+        })
+      );
+    };
+
+    res.status(200).json({
+      friends: await formatUsers(user.friends),
+      friendRequests: await formatUsers(user.friendRequests),
+      sentFriendRequests: await formatUsers(user.sentFriendRequests)
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── PATCH /users/:id/:friendId/reject ─── Reject Friend Request ── */
+export const rejectFriendRequest = async (req, res) => {
+  try {
+    const { id, friendId } = req.params;
+    if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
+
+    const user = await User.findById(id);
+    const friend = await User.findById(friendId);
+
+    if (!user || !friend)
+      return res.status(404).json({ message: "User not found" });
+
+    if (user.friendRequests.includes(friendId)) {
+      user.friendRequests = user.friendRequests.filter((fid) => fid !== friendId);
+      friend.sentFriendRequests = friend.sentFriendRequests.filter((fid) => fid !== id);
+      
+      await user.save();
+      await friend.save();
+    }
+
+    const formatUsers = async (userIds) => {
+      const users = await Promise.all(
+        userIds.map((uid) => User.findById(uid).select("-password"))
+      );
+      return users.filter(Boolean).map(
+        ({ _id, firstName, lastName, occupation, location, picturePath }) => ({
+          _id, firstName, lastName, occupation, location, picturePath,
+        })
+      );
+    };
+
+    res.status(200).json({
+      friends: await formatUsers(user.friends),
+      friendRequests: await formatUsers(user.friendRequests),
+      sentFriendRequests: await formatUsers(user.sentFriendRequests)
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 /* ── PATCH /users/:id/socials ─── update social profile links ── */
@@ -207,6 +328,51 @@ export const getPostCount = async (req, res) => {
     const { id } = req.params;
     const count = await Post.countDocuments({ userId: id });
     res.status(200).json({ count });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── PATCH /users/:id/savePost/:postId ─── Toggle Saved Post ── */
+export const toggleSavedPost = async (req, res) => {
+  try {
+    const { id, postId } = req.params;
+    if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isSaved = user.savedPosts.includes(postId);
+
+    if (isSaved) {
+      user.savedPosts = user.savedPosts.filter((savedId) => savedId !== postId);
+    } else {
+      user.savedPosts.push(postId);
+    }
+
+    await user.save();
+
+    res.status(200).json({ savedPosts: user.savedPosts });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── GET /users/:id/savedPosts ─── Get all saved posts ──────── */
+export const getSavedPosts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Fetch the actual post documents using the saved IDs
+    const savedPosts = await Post.find({
+      _id: { $in: user.savedPosts }
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(savedPosts);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

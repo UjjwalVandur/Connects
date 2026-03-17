@@ -4,7 +4,7 @@ import { setPosts } from "state";
 import PostWidget from "./PostWidget";
 import API_BASE_URL from "config";
 
-const PostsWidget = ({ userId, isProfile = false }) => {
+const PostsWidget = ({ userId, isProfile = false, isSaved = false }) => {
   const dispatch = useDispatch();
   const posts = useSelector((state) => state.posts);
   const token = useSelector((state) => state.token);
@@ -31,13 +31,27 @@ const PostsWidget = ({ userId, isProfile = false }) => {
     dispatch(setPosts({ posts: data }));
   };
 
+  const getSavedPosts = async () => {
+    const response = await fetch(
+      `${API_BASE_URL}/users/${userId}/savedPosts`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const data = await response.json();
+    dispatch(setPosts({ posts: data }));
+  };
+
   useEffect(() => {
-    if (isProfile) {
+    if (isSaved) {
+      getSavedPosts();
+    } else if (isProfile) {
       getUserPosts();
     } else {
       getPosts();
     }
-  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userId, isSaved, isProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>

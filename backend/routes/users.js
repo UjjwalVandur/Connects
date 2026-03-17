@@ -11,6 +11,10 @@ import {
   incrementViewedProfile,
   getPostCount,
   updateProfilePicture,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  toggleSavedPost,
+  getSavedPosts,
 } from "../controllers/users.js";
 import verifyToken from "../middleware/auth.js";
 import { upload } from "../middleware/upload.js";
@@ -32,6 +36,10 @@ router.delete("/:id/advert",    verifyToken, deleteAdvert);
 // ── Dynamic routes LAST ───────────────────────────────────────
 router.get("/:id",              verifyToken, getUser);
 router.get("/:id/friends",      verifyToken, getUserFriends);
+router.get("/:id/savedPosts",   verifyToken, getSavedPosts);
 router.patch("/:id/:friendId",  verifyToken, addRemoveFriend);
+router.patch("/:id/:friendId/accept", verifyToken, acceptFriendRequest);
+router.patch("/:id/:friendId/reject", verifyToken, rejectFriendRequest);
+router.patch("/:id/savePost/:postId", verifyToken, toggleSavedPost);
 
 export default router;

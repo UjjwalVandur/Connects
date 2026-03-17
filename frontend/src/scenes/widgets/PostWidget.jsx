@@ -12,8 +12,9 @@ import Friend from "components/Friend";
 import { SocialCard } from "components/ui/social-card";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setPost } from "state";
+import { setPost, setSavedPosts } from "state";
 import API_BASE_URL from "config";
+import { User as UserIcon } from "lucide-react";
 
 const PostWidget = ({
   postId,
@@ -40,6 +41,9 @@ const PostWidget = ({
   const likeCount = Object.keys(likes).length;
   const { palette } = useTheme();
 
+  const savedPosts = useSelector((state) => state.user.savedPosts || []);
+  const isBookmarked = savedPosts.includes(postId);
+
   /* ── API actions ─────────────────────────────────────── */
   const patchLike = async () => {
     const response = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
@@ -57,6 +61,20 @@ const PostWidget = ({
   const handleShare = () => {
     navigator.clipboard.writeText(`${window.location.origin}/post/${postId}`);
     setSnackOpen(true);
+  };
+
+  const patchSave = async () => {
+    const response = await fetch(`${API_BASE_URL}/users/${loggedInUserId}/savePost/${postId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (response.ok) {
+        const updatedUser = await response.json();
+        dispatch(setSavedPosts({ savedPosts: updatedUser.savedPosts }));
+    }
   };
 
   const submitComment = async () => {
@@ -101,41 +119,79 @@ const PostWidget = ({
     </Box>
   ) : null;
 
+  /* ── Colour tokens for comments (matching ActivityDropdown) ── */
+  const bg          = isDark ? "rgba(13,17,23,0.96)"       : "rgba(255,255,255,0.96)";
+  const border      = isDark ? "rgba(255,255,255,0.09)"     : "rgba(100,116,139,0.18)";
+  const textPrimary = isDark ? "#ffffff"                    : "#0f172a";
+  const textMuted   = isDark ? "rgba(255,255,255,0.55)"     : "#64748b";
+  const iconBg      = isDark ? "rgba(255,255,255,0.08)"     : "rgba(0,0,0,0.05)";
+  const iconColor   = isDark ? "rgba(255,255,255,0.7)"      : "#334155";
+  const hoverBg     = isDark ? "rgba(255,255,255,0.05)"     : "rgba(0,0,0,0.03)";
+
   /* ── Comments section (rendered as children of SocialCard) ── */
   const commentsNode = isComments && (
-    <Box sx={{ px: "1.25rem", pb: "1rem", pt: "0.25rem" }}>
-      {comments.map((comment, i) => {
-        const { author, text } = parseComment(comment);
-        return (
-          <Box key={`${name}-${i}`}>
-            <Divider
+    <Box
+      sx={{
+        width: "100%",
+        borderRadius: "14px",
+        overflow: "hidden",
+        background: bg,
+        backdropFilter: "blur(20px)",
+        border: `1px solid ${border}`,
+        boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.45)" : "0 8px 24px rgba(0,0,0,0.1)",
+        mt: "1rem",
+        mb: "0.5rem"
+      }}
+    >
+      <Box sx={{ p: "0.75rem", display: "flex", flexDirection: "column", gap: "2px" }}>
+        {comments.map((comment, i) => {
+          const { author, text } = parseComment(comment);
+          return (
+            <Box
+              key={`${name}-${i}`}
               sx={{
-                borderColor: isDark
-                  ? "rgba(255,255,255,0.07)"
-                  : "rgba(0,0,0,0.07)",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "0.75rem",
+                borderRadius: "12px",
+                padding: "0.75rem",
+                background: "transparent",
+                transition: "all 0.3s ease",
+                cursor: "default",
+                "&:hover": { background: hoverBg }
               }}
-            />
-            <Box sx={{ display: "flex", gap: "0.5rem", m: "0.5rem 0", alignItems: "baseline" }}>
-              <Typography fontWeight="700" fontSize="0.8rem" color={palette.primary.main}>
-                {author}
-              </Typography>
-              <Typography
-                fontSize="0.85rem"
-                sx={{ color: isDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)" }}
+            >
+              <Box
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: "10px",
+                  background: iconBg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  color: iconColor,
+                }}
               >
-                {text}
-              </Typography>
+                <UserIcon style={{ width: 18, height: 18 }} />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ margin: 0, fontWeight: 600, fontSize: "0.82rem", color: textPrimary }}>
+                  {author}
+                </Typography>
+                <Typography sx={{ margin: 0, fontSize: "0.78rem", color: textMuted, wordBreak: "break-word" }}>
+                  {text}
+                </Typography>
+              </Box>
             </Box>
-          </Box>
-        );
-      })}
-      <Divider
-        sx={{
-          borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-          mb: "0.75rem",
-        }}
-      />
-      <Box sx={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          );
+        })}
+      </Box>
+
+      <Divider sx={{ borderColor: border }} />
+      
+      <Box sx={{ display: "flex", gap: "0.75rem", p: "0.75rem", alignItems: "center" }}>
         <InputBase
           placeholder="Add a comment…"
           onChange={(e) => setNewComment(e.target.value)}
@@ -143,10 +199,16 @@ const PostWidget = ({
           fullWidth
           sx={{
             backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+            border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
             borderRadius: "1.5rem",
             padding: "0.4rem 1.2rem",
             fontSize: "0.85rem",
             color: isDark ? "#fff" : "#1a1a1a",
+            transition: "border-color 0.2s, background-color 0.2s",
+            "&:focus-within": {
+              borderColor: isDark ? "#00D5FA" : "#00A0BC",
+              backgroundColor: isDark ? "rgba(0,213,250,0.05)" : "rgba(0,160,188,0.05)"
+            }
           }}
           onKeyDown={(e) => { if (e.key === "Enter") submitComment(); }}
         />
@@ -155,14 +217,24 @@ const PostWidget = ({
           disabled={!newComment.trim()}
           sx={{
             color: palette.background.alt,
-            backgroundColor: palette.primary.main,
+            backgroundColor: isDark ? "#00D5FA" : "#00A0BC",
             borderRadius: "2rem",
             px: "1.2rem",
             fontSize: "0.8rem",
+            fontWeight: "600",
             minWidth: "unset",
             whiteSpace: "nowrap",
-            "&:hover": { backgroundColor: palette.primary.dark },
-            "&:disabled": { opacity: 0.5 },
+            boxShadow: `0 4px 12px ${isDark ? "rgba(0,213,250,0.3)" : "rgba(0,160,188,0.3)"}`,
+            "&:hover": { 
+              backgroundColor: isDark ? "#00b5d6" : "#00859c",
+              boxShadow: `0 6px 16px ${isDark ? "rgba(0,213,250,0.4)" : "rgba(0,160,188,0.4)"}`,
+            },
+            "&:disabled": { 
+              opacity: 0.5,
+              backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)",
+              color: textMuted,
+              boxShadow: "none"
+            },
           }}
         >
           Post
@@ -188,11 +260,12 @@ const PostWidget = ({
         }}
         engagement={{
           isLiked,
-          isBookmarked: false,
+          isBookmarked,
           likes: likeCount,
           comments: comments.length,
         }}
         onLike={patchLike}
+        onBookmark={patchSave}
         onComment={() => setIsComments((v) => !v)}
         onShare={handleShare}
         headerExtra={
