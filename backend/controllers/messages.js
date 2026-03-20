@@ -8,6 +8,31 @@ const getMediaType = (mimetype = "") => {
   return "file";
 };
 
+/* ── GET /messages/unread-count ── count unread messages ────── */
+export const getUnreadCount = async (req, res) => {
+  try {
+    const myId = req.user.id;
+    const count = await Message.countDocuments({ receiverId: myId, read: false });
+    res.status(200).json({ count });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── PATCH /messages/read ── mark all messages as read ──────── */
+export const markAllAsRead = async (req, res) => {
+  try {
+    const myId = req.user.id;
+    await Message.updateMany(
+      { receiverId: myId, read: false },
+      { $set: { read: true } }
+    );
+    res.status(200).json({ message: "Messages marked as read" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 /* ── GET /messages/:friendId ── conversation history ───────── */
 export const getMessages = async (req, res) => {
   try {

@@ -214,34 +214,26 @@ const MyPostWidget = ({ picturePath }) => {
         </Tooltip>
 
         {/* Video button */}
-        {isNonMobileScreens && (
-          <Tooltip title="Add Video">
-            <FlexBetween
-              gap="0.25rem"
-              onClick={handleVideoToggle}
-              sx={{
-                cursor: "pointer",
-                px: "0.75rem",
-                py: "0.4rem",
-                borderRadius: "0.5rem",
-                backgroundColor: isVideo ? palette.primary.light + "22" : "transparent",
-                "&:hover": { backgroundColor: palette.neutral.light },
-                transition: "background-color 0.2s",
-              }}
-            >
-              <VideoLibraryOutlined sx={{ color: isVideo ? palette.primary.main : mediumMain }} />
-              <Typography color={isVideo ? palette.primary.main : mediumMain} fontWeight={isVideo ? 600 : 400}>
-                Video
-              </Typography>
-            </FlexBetween>
-          </Tooltip>
-        )}
-
-        {!isNonMobileScreens && (
-          <FlexBetween gap="0.25rem">
-            <MoreHorizOutlined sx={{ color: mediumMain }} />
+        <Tooltip title="Add Video">
+          <FlexBetween
+            gap="0.25rem"
+            onClick={handleVideoToggle}
+            sx={{
+              cursor: "pointer",
+              px: "0.75rem",
+              py: "0.4rem",
+              borderRadius: "0.5rem",
+              backgroundColor: isVideo ? palette.primary.light + "22" : "transparent",
+              "&:hover": { backgroundColor: palette.neutral.light },
+              transition: "background-color 0.2s",
+            }}
+          >
+            <VideoLibraryOutlined sx={{ color: isVideo ? palette.primary.main : mediumMain }} />
+            <Typography color={isVideo ? palette.primary.main : mediumMain} fontWeight={isVideo ? 600 : 400}>
+              Video
+            </Typography>
           </FlexBetween>
-        )}
+        </Tooltip>
 
         <Button
           disabled={!post && !image && !video}

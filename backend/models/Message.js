@@ -8,6 +8,7 @@ const messageSchema = new mongoose.Schema(
     mediaPath:  { type: String, default: "" },  // uploaded file name
     mediaType:  { type: String, default: "" },  // "image" | "audio" | "file"
     fileName:   { type: String, default: "" },  // original file display name
+    read:       { type: Boolean, default: false },
   },
   { timestamps: true }
 );

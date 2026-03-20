@@ -83,7 +83,7 @@ const ProfilePage = () => {
       <Navbar />
       <Box
         width="100%"
-        padding="2rem 6%"
+        padding={isNonMobileScreens ? "2rem 6%" : "2rem 6% 6rem 6%"}
         display={isNonMobileScreens ? "flex" : "block"}
         gap="2rem"
         justifyContent="center"

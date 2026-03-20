@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { FreelancerProfileCard } from "components/ui/freelancer-profile-card";
 import API_BASE_URL from "config";
+import { Box } from "@mui/material";
 
 const DEFAULT_GRADIENT = "linear-gradient(135deg,#00D5FA,#0077FF)";
 const DEFAULT_LINKS = [{ label: "Link 1", url: "" }, { label: "Link 2", url: "" }];
@@ -67,19 +68,21 @@ const FreelancerProfileCardWidget = ({ userId, picturePath }) => {
   const viewCount   = viewedProfile ?? 0;
 
   return (
-    <FreelancerProfileCard
-      name={fullName}
-      title={occupation || "Member"}
-      avatarSrc={avatarSrc}
-      bannerGradient={bannerGradient}
-      onBannerChange={handleBannerChange}
-      posts={postCount}
-      friends={friendCount}
-      views={viewCount}
-      toolLinks={toolLinks}
-      onToolLinksChange={handleToolLinksChange}
-      isDark={isDark}
-    />
+    <Box mb={{ xs: "1.5rem", md: 0 }}>
+      <FreelancerProfileCard
+        name={fullName}
+        title={occupation || "Member"}
+        avatarSrc={avatarSrc}
+        bannerGradient={bannerGradient}
+        onBannerChange={handleBannerChange}
+        posts={postCount}
+        friends={friendCount}
+        views={viewCount}
+        toolLinks={toolLinks}
+        onToolLinksChange={handleToolLinksChange}
+        isDark={isDark}
+      />
+    </Box>
   );
 };
 

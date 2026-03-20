@@ -29,7 +29,9 @@ const userSchema = new mongoose.Schema(
       description: String,
       link: String,
       mediaPath: String
-    }
+    },
+    resetPasswordToken:   { type: String,  default: null },
+    resetPasswordExpires: { type: Date,    default: null },
   },
   { timestamps: true }
 );

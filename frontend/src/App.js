@@ -5,6 +5,7 @@ import LoginPage from "./scenes/loginPage";
 import LandingPage from "./scenes/landingPage";
 import ProfilePage from "./scenes/profilePage";
 import MessagesPage from "./scenes/messagesPage";
+import ResetPasswordPage from "./scenes/resetPasswordPage";
 import { useSelector } from "react-redux";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { createTheme } from "@mui/material/styles";
@@ -27,7 +28,8 @@ function App() {
               <Route path="/login"          element={<LoginPage />} />
               <Route path="/home"           element={isAuth ? <HomePage />    : <Navigate to="/login" />} />
               <Route path="/profile/:userId" element={isAuth ? <ProfilePage /> : <Navigate to="/login" />} />
-              <Route path="/messages"       element={isAuth ? <MessagesPage /> : <Navigate to="/login" />} />
+              <Route path="/messages"        element={isAuth ? <MessagesPage /> : <Navigate to="/login" />} />
+              <Route path="/reset-password"   element={<ResetPasswordPage />} />
             </Routes>
           </SocketProvider>
         </ThemeProvider>

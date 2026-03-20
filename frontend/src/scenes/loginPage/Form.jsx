@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { TextField, useTheme, useMediaQuery } from "@mui/material";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { Formik } from "formik";
@@ -60,6 +60,85 @@ const darkFieldSx = {
   "& .MuiInputLabel-root": { color: "rgba(255,255,255,0.4)" },
   "& .MuiInputLabel-root.Mui-focused": { color: "#00e5ff" },
   "& .MuiFormHelperText-root": { color: "rgba(239,68,68,0.8)" },
+};
+
+/* ── Forgot Password inline widget ─────────────────────────── */
+const ForgotPasswordLink = () => {
+  const [open,    setOpen]    = useState(false);
+  const [email,   setEmail]   = useState("");
+  const [status,  setStatus]  = useState("idle"); // idle | loading | sent | error
+  const [msg,     setMsg]     = useState("");
+
+  const handleSend = async () => {
+    if (!email.trim()) return;
+    setStatus("loading");
+    setMsg("");
+    try {
+      const res  = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      setStatus("sent");
+      setMsg(data.message || "Reset link sent!");
+    } catch {
+      setStatus("error");
+      setMsg("Network error. Please try again.");
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        style={{ background: "none", border: "none", color: "rgba(0,229,255,0.7)", fontSize: "0.8rem", cursor: "pointer", padding: 0 }}
+      >
+        Forgot password?
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: "4px", padding: "14px 16px", borderRadius: "14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", textAlign: "left" }}>
+      <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.8rem", marginBottom: "10px" }}>
+        Enter your account email and we'll send a reset link.
+      </p>
+      {status === "sent" ? (
+        <p style={{ color: "#4ade80", fontSize: "0.82rem" }}>✅ {msg}</p>
+      ) : (
+        <>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            autoComplete="email"
+            style={{
+              width: "100%", padding: "9px 12px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.15)",
+              background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: "0.85rem", outline: "none", boxSizing: "border-box", marginBottom: "8px",
+            }}
+          />
+          {msg && <p style={{ color: "#f87171", fontSize: "0.78rem", marginBottom: "6px" }}>{msg}</p>}
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              type="button" onClick={handleSend} disabled={status === "loading"}
+              style={{ flex: 1, padding: "8px", borderRadius: "999px", border: "none", background: "linear-gradient(135deg,#00e5ff,#0077ff)", color: "#000", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer" }}
+            >
+              {status === "loading" ? "Sending…" : "Send Reset Link"}
+            </button>
+            <button
+              type="button" onClick={() => { setOpen(false); setEmail(""); setStatus("idle"); setMsg(""); }}
+              style={{ padding: "8px 14px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.15)", background: "none", color: "rgba(255,255,255,0.45)", fontSize: "0.8rem", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 const Form = ({ pageType, setPageType }) => {
@@ -228,6 +307,7 @@ const Form = ({ pageType, setPageType }) => {
               helperText={touched.email && errors.email}
               sx={{ ...darkFieldSx, gridColumn: "span 4" }}
               size="small"
+              inputProps={{ autoComplete: "email" }}
             />
             <TextField
               label="Password"
@@ -240,7 +320,15 @@ const Form = ({ pageType, setPageType }) => {
               helperText={touched.password && errors.password}
               sx={{ ...darkFieldSx, gridColumn: "span 4" }}
               size="small"
+              inputProps={{ autoComplete: isLogin ? "current-password" : "new-password" }}
             />
+
+            {/* Forgot password link — login mode only */}
+            {isLogin && (
+              <div style={{ gridColumn: "span 4", textAlign: "right" }}>
+                <ForgotPasswordLink />
+              </div>
+            )}
           </div>
 
           {/* Error message */}
