@@ -56,7 +56,7 @@ const SearchBarComponent = ({ token, navigate, isDarkMode, theme }) => {
             <List disablePadding>
               {searchResults.map((u, i) => (
                 <ListItem key={u._id} button onClick={() => handleSelectUser(u._id)} divider={i < searchResults.length - 1} sx={{ "&:hover": { backgroundColor: theme.palette.neutral.light }, cursor: "pointer", gap: "0.5rem", py: "0.6rem" }}>
-                  <ListItemAvatar sx={{ minWidth: 44 }}><Avatar src={u.picturePath ? `${API_BASE_URL}/assets/${u.picturePath}` : undefined} sx={{ width: 36, height: 36, bgcolor: theme.palette.primary.main }}>{u.firstName?.[0]}</Avatar></ListItemAvatar>
+                  <ListItemAvatar sx={{ minWidth: 44 }}><Avatar src={u.picturePath ? (u.picturePath.startsWith("http") ? u.picturePath : `${API_BASE_URL}/assets/${u.picturePath}`) : undefined} sx={{ width: 36, height: 36, bgcolor: theme.palette.primary.main }}>{u.firstName?.[0]}</Avatar></ListItemAvatar>
                   <ListItemText primary={<Typography fontWeight="600" fontSize="0.9rem">{u.firstName} {u.lastName}</Typography>} secondary={<Typography fontSize="0.75rem" color={theme.palette.neutral.medium}>{u.occupation || ""}</Typography>} />
                 </ListItem>
               ))}
@@ -279,7 +279,7 @@ const Navbar = () => {
           {/* Profile — goes directly to profile page */}
           <button style={mobileBtn(mobileActive === 2)} onClick={() => navigate(`/profile/${user._id}`)}>
             {mobileActive === 2 && activeIndicator}
-            <Avatar src={user.picturePath ? `${API_BASE_URL}/assets/${user.picturePath}` : undefined} sx={{ width: 26, height: 26, border: mobileActive === 2 ? "2px solid #00D5FA" : "2px solid rgba(128,128,128,0.3)", transition: "border-color 0.2s" }}>
+            <Avatar src={user.picturePath ? (user.picturePath.startsWith("http") ? user.picturePath : `${API_BASE_URL}/assets/${user.picturePath}`) : undefined} sx={{ width: 26, height: 26, border: mobileActive === 2 ? "2px solid #00D5FA" : "2px solid rgba(128,128,128,0.3)", transition: "border-color 0.2s" }}>
               {user.firstName?.[0]}
             </Avatar>
             <span style={{ fontSize: "0.63rem", fontWeight: mobileActive === 2 ? 700 : 500 }}>Profile</span>
@@ -378,7 +378,7 @@ const Navbar = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Update Profile Photo</DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" alignItems="center" gap="1rem">
-            <Avatar src={picPreview || (user.picturePath ? `${API_BASE_URL}/assets/${user.picturePath}` : null)} sx={{ width: 120, height: 120, border: `4px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}` }} />
+            <Avatar src={picPreview || (user.picturePath ? (user.picturePath.startsWith("http") ? user.picturePath : `${API_BASE_URL}/assets/${user.picturePath}`) : null)} sx={{ width: 120, height: 120, border: `4px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}` }} />
             <input type="file" accept="image/*" hidden ref={picInputRef} onChange={(e) => { const f = e.target.files[0]; if (f) { setPicFile(f); setPicPreview(URL.createObjectURL(f)); } }} />
             <Button variant="outlined" startIcon={<PhotoCamera />} onClick={() => picInputRef.current.click()} sx={{ borderRadius: 8 }}>Choose new photo</Button>
           </Box>

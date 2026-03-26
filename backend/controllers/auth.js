@@ -15,11 +15,14 @@ const createTransporter = () =>
 export const register = async (req, res) => {
   const {
     firstName, lastName, email, password,
-    picturePath, friends, location, occupation,
+    friends, location, occupation,
   } = req.body;
 
   const existing = await User.findOne({ email });
   if (existing) return res.status(409).json({ message: "Email already in use" });
+
+  // req.file.path is the Cloudinary HTTPS URL (multer-storage-cloudinary)
+  const picturePath = req.file ? req.file.path : "";
 
   const salt         = await bcrypt.genSalt();
   const passwordHash = await bcrypt.hash(password, salt);

@@ -63,7 +63,7 @@ const FreelancerProfileCardWidget = ({ userId, picturePath }) => {
 
   const { firstName, lastName, occupation, viewedProfile, friends } = user;
   const fullName    = `${firstName} ${lastName}`;
-  const avatarSrc   = picturePath ? `${API_BASE_URL}/assets/${picturePath}` : undefined;
+  const avatarSrc   = picturePath ? (picturePath.startsWith("http") ? picturePath : `${API_BASE_URL}/assets/${picturePath}`) : undefined;
   const friendCount = friends?.length ?? 0;
   const viewCount   = viewedProfile ?? 0;
 

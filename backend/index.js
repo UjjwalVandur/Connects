@@ -2,13 +2,15 @@
    index.js  –  Social Media API entry point with Socket.io
    ───────────────────────────────────────────────────────────── */
 import "express-async-errors";
+import "./env.js"; // Loads dotenv before anything else is evaluated
+
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import helmet from "helmet";
 import morgan from "morgan";
 import cors from "cors";
-import dotenv from "dotenv";
+
 import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -20,9 +22,6 @@ import postRoutes          from "./routes/posts.js";
 import messageRoutes       from "./routes/messages.js";
 import notificationRoutes  from "./routes/notifications.js";
 import adRoutes            from "./routes/ads.js";
-
-// ── Config ────────────────────────────────────────────────────
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -85,9 +84,6 @@ app.use(
     credentials: true,
   })
 );
-
-// ── Static file serving (uploaded assets) ────────────────────
-app.use("/assets", express.static(path.join(__dirname, "public/assets")));
 
 // ── API Routes ────────────────────────────────────────────────
 app.use("/auth",          authRoutes);

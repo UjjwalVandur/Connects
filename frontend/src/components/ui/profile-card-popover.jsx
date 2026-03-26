@@ -144,7 +144,7 @@ const ProfileCardPopover = ({ userId, children, triggerClass = "" }) => {
         <FreelancerProfileCard
           name={`${userData.firstName} ${userData.lastName}`}
           title={userData.occupation || "Member"}
-          avatarSrc={userData.picturePath ? `${API_BASE_URL}/assets/${userData.picturePath}` : undefined}
+          avatarSrc={userData.picturePath ? (userData.picturePath.startsWith("http") ? userData.picturePath : `${API_BASE_URL}/assets/${userData.picturePath}`) : undefined}
           bannerGradient={bannerGradient}
           posts={postCount}
           friends={userData.friends?.length ?? 0}

@@ -156,29 +156,43 @@ const Form = ({ pageType, setPageType }) => {
     for (let value in values) formData.append(value, values[value]);
     formData.append("picturePath", values.picture.name);
 
-    const res = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: "POST",
-      body: formData,
-    });
-    const savedUser = await res.json();
-    onSubmitProps.resetForm();
-    if (savedUser) setPageType("login");
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        onSubmitProps.resetForm();
+        setPageType("login");
+      } else {
+        setErrorMsg(data.message || "Registration failed. Please try again.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error. Please try again.");
+    }
   };
 
   const login = async (values, onSubmitProps) => {
     setErrorMsg("");
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
-    const loggedIn = await res.json();
-    onSubmitProps.resetForm();
-    if (loggedIn.token) {
-      dispatch(setLogin({ user: loggedIn.user, token: loggedIn.token }));
-      navigate("/home");
-    } else {
-      setErrorMsg(loggedIn.msg || "Invalid credentials. Please try again.");
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.token) {
+        onSubmitProps.resetForm();
+        dispatch(setLogin({ user: data.user, token: data.token }));
+        navigate("/home");
+      } else {
+        setErrorMsg(data.message || data.msg || "Invalid credentials. Please try again.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error. Please try again.");
     }
   };
 

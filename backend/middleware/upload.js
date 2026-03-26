@@ -1,18 +1,23 @@
 import multer from "multer";
-import path from "path";
-import { fileURLToPath } from "url";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import { v2 as cloudinary } from "cloudinary";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+// Configure Cloudinary using env vars (set these in Render dashboard)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Navigate up one level from 'middleware' folder, then into 'public/assets'
-    cb(null, path.join(__dirname, "../public/assets"));
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  },
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => ({
+    folder: "connects",
+    resource_type: file.mimetype.startsWith("video") ? "video" : "image",
+    // Unique filename: timestamp + sanitised original name
+    public_id: `${Date.now()}-${file.originalname.replace(/\s+/g, "_")}`,
+  }),
 });
 
 export const upload = multer({ storage });
+export { cloudinary };

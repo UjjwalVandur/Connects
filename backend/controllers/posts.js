@@ -4,7 +4,7 @@ import { createNotification } from "./notifications.js";
 
 /* ── POST /posts  (create post) ─────────────────────────── */
 export const createPost = async (req, res) => {
-  const { userId, description, picturePath } = req.body;
+  const { userId, description } = req.body;
 
   // Security: ensure the user can only post as themselves
   if (req.user.id !== userId) {
@@ -14,6 +14,10 @@ export const createPost = async (req, res) => {
   const user = await User.findById(userId);
   if (!user) return res.status(404).json({ message: "User not found" });
 
+  // req.file.path is the full Cloudinary HTTPS URL (set by multer-storage-cloudinary)
+  const cloudinaryUrl = req.file ? req.file.path : "";
+  const isVideo = req.file && req.file.mimetype.startsWith("video");
+
   const newPost = new Post({
     userId,
     firstName:       user.firstName,
@@ -21,8 +25,8 @@ export const createPost = async (req, res) => {
     location:        user.location,
     description,
     userPicturePath: user.picturePath,
-    picturePath:     picturePath || "",
-    videoPath:       req.file && req.file.mimetype.startsWith("video") ? req.file.originalname : "",
+    picturePath:     !isVideo ? cloudinaryUrl : "",   // image Cloudinary URL
+    videoPath:       isVideo  ? cloudinaryUrl : "",   // video Cloudinary URL
     likes:           {},
     comments:        [],
   });

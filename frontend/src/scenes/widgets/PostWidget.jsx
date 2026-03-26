@@ -106,7 +106,7 @@ const PostWidget = ({
       alt="post"
       onDoubleClick={patchLike}
       style={{ cursor: "pointer", borderRadius: "0.75rem", display: "block" }}
-      src={`${API_BASE_URL}/assets/${picturePath}`}
+      src={picturePath?.startsWith("http") ? picturePath : `${API_BASE_URL}/assets/${picturePath}`}
     />
   ) : videoPath ? (
     <Box borderRadius="0.75rem" overflow="hidden">
@@ -114,7 +114,7 @@ const PostWidget = ({
         controls
         width="100%"
         style={{ borderRadius: "0.75rem", display: "block" }}
-        src={`${API_BASE_URL}/assets/${videoPath}`}
+        src={videoPath?.startsWith("http") ? videoPath : `${API_BASE_URL}/assets/${videoPath}`}
       />
     </Box>
   ) : null;
@@ -251,7 +251,7 @@ const PostWidget = ({
           name,
           subtitle: location,
           avatar: userPicturePath
-            ? `${API_BASE_URL}/assets/${userPicturePath}`
+            ? (userPicturePath.startsWith("http") ? userPicturePath : `${API_BASE_URL}/assets/${userPicturePath}`)
             : undefined,
         }}
         content={{

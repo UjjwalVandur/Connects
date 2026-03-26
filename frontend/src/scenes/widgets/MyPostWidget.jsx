@@ -45,11 +45,9 @@ const MyPostWidget = ({ picturePath }) => {
     formData.append("description", post);
     if (image) {
       formData.append("picture", image);
-      formData.append("picturePath", image.name);
     }
     if (video) {
       formData.append("picture", video);
-      formData.append("picturePath", video.name);
     }
 
     const response = await fetch(`${API_BASE_URL}/posts`, {

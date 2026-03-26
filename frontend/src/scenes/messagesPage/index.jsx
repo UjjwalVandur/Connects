@@ -68,28 +68,28 @@ const MessageBubble = ({ msg, isMe, palette, isDark }) => {
     >
       {hasMedia && isImage && (
         <img
-          src={`${API_BASE_URL}/assets/${msg.mediaPath}`}
+          src={msg.mediaPath?.startsWith("http") ? msg.mediaPath : `${API_BASE_URL}/assets/${msg.mediaPath}`}
           alt="img"
           style={{ maxWidth: "100%", maxHeight: 220, borderRadius: 10, display: "block", marginBottom: msg.text ? "0.4rem" : 0 }}
         />
       )}
       {hasMedia && isVideo && (
         <video
-          src={`${API_BASE_URL}/assets/${msg.mediaPath}`}
+          src={msg.mediaPath?.startsWith("http") ? msg.mediaPath : `${API_BASE_URL}/assets/${msg.mediaPath}`}
           controls
           style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 10, display: "block", marginBottom: msg.text ? "0.4rem" : 0 }}
         />
       )}
       {hasMedia && isAudio && (
         <audio
-          src={`${API_BASE_URL}/assets/${msg.mediaPath}`}
+          src={msg.mediaPath?.startsWith("http") ? msg.mediaPath : `${API_BASE_URL}/assets/${msg.mediaPath}`}
           controls
           style={{ width: "100%", minWidth: "230px", marginBottom: msg.text ? "0.4rem" : 0, borderRadius: 8 }}
         />
       )}
       {hasMedia && isFile && (
         <a
-          href={`${API_BASE_URL}/assets/${msg.mediaPath}`}
+          href={msg.mediaPath?.startsWith("http") ? msg.mediaPath : `${API_BASE_URL}/assets/${msg.mediaPath}`}
           target="_blank"
           rel="noreferrer"
           download
@@ -304,7 +304,7 @@ const MessagesPage = () => {
               >
                 <ListItemAvatar>
                   <Avatar
-                    src={f.picturePath ? `${API_BASE_URL}/assets/${f.picturePath}` : undefined}
+                    src={f.picturePath ? (f.picturePath.startsWith("http") ? f.picturePath : `${API_BASE_URL}/assets/${f.picturePath}`) : undefined}
                     sx={{ width: 42, height: 42, border: "2px solid rgba(0,213,250,0.4)" }}
                   >
                     {f.firstName?.[0]}
@@ -348,7 +348,7 @@ const MessagesPage = () => {
                 <ArrowBack />
               </IconButton>
               <Avatar
-                src={selectedFriend.picturePath ? `${API_BASE_URL}/assets/${selectedFriend.picturePath}` : undefined}
+                src={selectedFriend.picturePath ? (selectedFriend.picturePath.startsWith("http") ? selectedFriend.picturePath : `${API_BASE_URL}/assets/${selectedFriend.picturePath}`) : undefined}
                 sx={{ width: 44, height: 44, border: "2px solid rgba(0,213,250,0.5)", boxShadow: "0 0 10px rgba(0,213,250,0.3)" }}
               />
               <Box>
@@ -378,7 +378,7 @@ const MessagesPage = () => {
                   >
                     {!isMe && (
                       <Avatar
-                        src={selectedFriend.picturePath ? `${API_BASE_URL}/assets/${selectedFriend.picturePath}` : undefined}
+                        src={selectedFriend.picturePath ? (selectedFriend.picturePath.startsWith("http") ? selectedFriend.picturePath : `${API_BASE_URL}/assets/${selectedFriend.picturePath}`) : undefined}
                         sx={{ width: 28, height: 28, border: "1.5px solid rgba(0,213,250,0.4)" }}
                       />
                     )}

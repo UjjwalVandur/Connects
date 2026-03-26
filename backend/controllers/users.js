@@ -7,7 +7,7 @@ export const updateProfilePicture = async (req, res) => {
     const { id } = req.params;
     if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    const picturePath = req.file.originalname;
+    const picturePath = req.file.path; // Cloudinary returns full HTTPS URL in .path
     const user = await User.findByIdAndUpdate(
       id,
       { picturePath },
@@ -263,7 +263,7 @@ export const updateAdvert = async (req, res) => {
     const { id } = req.params;
     if (req.user.id !== id) return res.status(403).json({ message: "Unauthorized" });
     const { title, description, link } = req.body;
-    const mediaPath = req.file ? req.file.originalname : req.body.mediaPath || "";
+    const mediaPath = req.file ? req.file.path : req.body.mediaPath || ""; // Cloudinary URL
     const user = await User.findByIdAndUpdate(
       id,
       { advert: { title, description, link, mediaPath } },

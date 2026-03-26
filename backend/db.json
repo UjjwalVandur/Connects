@@ -1,0 +1,26 @@
+{
+  "users": [
+    {
+      "id": "69c5915b3c9b584c4dc5862a",
+      "email": "ujjwal.vandur@grexa.com",
+      "picture": "https://res.cloudinary.com/dzoproc4w/image/upload/v1774555483/connects/1774555480451-DocScanner_Aug_27%2C_2023_3-09_PM%281%29.jpg.jpg"
+    },
+    {
+      "id": "69c590a3e737855ed877a5f9",
+      "email": "test2@example.com",
+      "picture": ""
+    }
+  ],
+  "posts": [
+    {
+      "id": "69c592343c9b584c4dc58653",
+      "desc": "",
+      "picture": "https://res.cloudinary.com/dzoproc4w/image/upload/v1774555700/connects/1774555697893-download.jpg.jpg"
+    },
+    {
+      "id": "69bd2e860886e0375ad951e3",
+      "desc": "QA Testing Connects 2.0 - Creating a new post!",
+      "picture": ""
+    }
+  ]
+}

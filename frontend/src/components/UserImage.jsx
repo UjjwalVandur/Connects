@@ -17,7 +17,7 @@ const UserImage = ({ image, size = "60px" }) => {
           display: "block",
         }}
         alt="user"
-        src={`${API_BASE_URL}/assets/${image}`}
+        src={image?.startsWith("http") ? image : `${API_BASE_URL}/assets/${image}`}
       />
     </Box>
   );
