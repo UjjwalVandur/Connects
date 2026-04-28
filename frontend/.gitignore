@@ -6,3 +6,5 @@ build/
 .env.test.local
 .env.production.local
 .DS_Store
+.env.production
+.env.development
